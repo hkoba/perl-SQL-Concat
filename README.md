@@ -25,6 +25,7 @@ SQL::Concat - Zero knowledge SQL concatenator (with hidden bind variables)
 # DESCRIPTION
 
 SQL::Concat is yet another SQL generator for **minimalists**.
+See [lib/SQL/Concat.pod](blob/master/lib/SQL/Concat.pod) for details.
 
 # LICENSE
 
