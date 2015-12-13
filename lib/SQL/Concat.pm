@@ -152,7 +152,7 @@ __END__
 
 =head1 NAME
 
-SQL::Concat - Zero knowledge concatenator for SQLs (with hidden bind variables)
+SQL::Concat - Zero knowledge SQL concatenator (with hidden bind variables)
 
 =head1 SYNOPSIS
 

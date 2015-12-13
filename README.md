@@ -1,14 +1,30 @@
 # NAME
 
-SQL::Concat - It's new $module
+SQL::Concat - Zero knowledge SQL concatenator (with hidden bind variables)
 
 # SYNOPSIS
 
-    use SQL::Concat;
+```perl
+    # Functional interface
+    use SQL::Concat qw/SQL PAR/;
+
+    my $composed = SQL(SELECT => "*" =>
+                       FROM   => entries =>
+                       WHERE  => ("uid =" =>
+                                  PAR(SQL(SELECT => uid => FROM => authors =>
+                                          WHERE => ["name = ?", $name])))
+                     );
+
+    my ($sql, @bind) = $composed->as_sql_bind;
+
+    # OO Interface
+    my $comp = SQL::Concat->new(sep => ' ')
+      ->concat(SELECT => foo => FROM => 'bar');
+```
 
 # DESCRIPTION
 
-SQL::Concat is ...
+SQL::Concat is yet another SQL generator for **minimalists**.
 
 # LICENSE
 
