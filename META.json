@@ -1,10 +1,10 @@
 {
-   "abstract" : "It's new $module",
+   "abstract" : "Zero knowledge SQL concatenator (with hidden bind variables)",
    "author" : [
-      "KOBAYASI, Hiroaki <buribullet@gmail.com>"
+      "KOBAYASHI, Hiroaki <hkoba@cpan.org>"
    ],
-   "dynamic_config" : 0,
-   "generated_by" : "Minilla/v2.5.0, CPAN::Meta::Converter version 2.150001",
+   "dynamic_config" : 1,
+   "generated_by" : "Module::Build version 0.4214",
    "license" : [
       "perl_5"
    ],
@@ -13,45 +13,41 @@
       "version" : "2"
    },
    "name" : "SQL-Concat",
-   "no_index" : {
-      "directory" : [
-         "t",
-         "xt",
-         "inc",
-         "share",
-         "eg",
-         "examples",
-         "author",
-         "builder"
-      ]
-   },
    "prereqs" : {
-      "configure" : {
+      "build" : {
          "requires" : {
-            "Module::Build::Tiny" : "0.035"
+            "Module::Build::Pluggable::CPANfile" : "0.05"
          }
       },
-      "develop" : {
+      "configure" : {
          "requires" : {
-            "Test::CPAN::Meta" : "0",
-            "Test::MinimumVersion::Fast" : "0.04",
-            "Test::PAUSE::Permissions" : "0.04",
-            "Test::Pod" : "1.41",
-            "Test::Spellunker" : "v0.2.7"
+            "Module::Build" : "0.42",
+            "Module::Build::Pluggable::CPANfile" : "0.05"
          }
       },
       "runtime" : {
          "requires" : {
+            "MOP4Import::Declare" : "0",
             "perl" : "5.008001"
          }
       },
       "test" : {
          "requires" : {
-            "Test::More" : "0.98"
+            "Test::Kantan" : "0"
          }
       }
    },
-   "release_status" : "unstable",
-   "version" : "0.01",
-   "x_authority" : "cpan:HKOBA"
+   "provides" : {
+      "SQL::Concat" : {
+         "file" : "lib/SQL/Concat.pm",
+         "version" : "0.001"
+      }
+   },
+   "release_status" : "stable",
+   "resources" : {
+      "license" : [
+         "http://dev.perl.org/licenses/"
+      ]
+   },
+   "version" : "0.001"
 }
