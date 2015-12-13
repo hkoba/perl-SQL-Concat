@@ -6,13 +6,13 @@ SQL::Concat - Zero knowledge SQL concatenator (with hidden bind variables)
 
 ```perl
     # Functional interface
-    use SQL::Concat qw/SQL PAR/;
+    use SQL::Concat qw/SQL/;
 
     my $composed = SQL(SELECT => "*" =>
                        FROM   => entries =>
                        WHERE  => ("uid =" =>
-                                  PAR(SQL(SELECT => uid => FROM => authors =>
-                                          WHERE => ["name = ?", $name])))
+                                  SQL(SELECT => uid => FROM => authors =>
+                                      WHERE => ["name = ?", $name])->paren)
                      );
 
     my ($sql, @bind) = $composed->as_sql_bind;
