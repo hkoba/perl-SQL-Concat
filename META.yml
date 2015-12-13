@@ -4,7 +4,7 @@ author:
   - 'KOBAYASHI, Hiroaki <hkoba@cpan.org>'
 build_requires:
   Module::Build::Pluggable::CPANfile: '0.05'
-  Test::Kantan: '0'
+  Test::Kantan: '0.4'
 configure_requires:
   Module::Build: '0.42'
   Module::Build::Pluggable::CPANfile: '0.05'
@@ -20,8 +20,9 @@ provides:
     file: lib/SQL/Concat.pm
     version: '0.001'
 requires:
-  MOP4Import::Declare: '0'
+  MOP4Import::Declare: '0.002'
   perl: '5.008001'
 resources:
   license: http://dev.perl.org/licenses/
+  repository: https://github.com/hkoba/perl-SQL-Concat
 version: '0.001'
