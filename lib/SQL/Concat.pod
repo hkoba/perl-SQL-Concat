@@ -26,9 +26,9 @@ SQL::Concat - Zero knowledge SQL concatenator (with hidden bind variables)
 =head1 DESCRIPTION
 
 SQL::Concat is yet another SQL generator for B<minimalists>.
-This module only focuses on correctly concatinating SQL fragments
+This module only focuses on correctly concatenating SQL fragments
 with keeping their corresponding bind variables.
-Other important topics about SQL B<syntaxes>, B<quotes> or even B<SQL keywords>
+Other important topics about SQL B<syntaxes>, B<quotes>, or even B<SQL keywords>
 are all remained untouched to B<your side>. In other words, if you don't (want to)
 learn about SQL, use other SQL generators (e.g. L<SQL::Maker>, L<SQL::Abstract>, ...) instead.
 
@@ -41,7 +41,7 @@ Default $SEP is C<' '> but you can give it as L</sep> option or L</concat_by>.
 
 =item STRING
 
-Just used as resulting SQL as-is.
+Non-reference values are used just as resulting SQL as-is.
 This means each given strings are treated as B<RAW> SQL fragment.
 If you want to use foreign values, you must use next L</BIND_ARRAY>.
 
@@ -60,8 +60,9 @@ If you want to use foreign values, you must use next L</BIND_ARRAY>.
 =item BIND_ARRAY [$RAW_SQL, @BIND]
 X<BIND_ARRAY>
 
-First element is treated as RAW SQL.
-Rest of the elements are pushed into C<< ->{bind} >> array.
+If item is ARRAY reference, it is treated as BIND_ARRAY.
+The first element of BIND_ARRAY is treated as RAW SQL.
+The rest of the elements are pushed into C<< ->{bind} >> array.
 This SQL fragment must contain same number of SQL-placeholders(C<?>)
 with corresponding @BIND variables.
 
