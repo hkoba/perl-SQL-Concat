@@ -1,7 +1,7 @@
 # -*- mode: perl -*-
 requires perl => '5.010';
 
-requires 'MOP4Import::Declare' => 0.002;
+requires 'MOP4Import::Declare' => 0.003;
 
 on build => sub {
   requires 'Module::Build::Pluggable';
