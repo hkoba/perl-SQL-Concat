@@ -1,6 +1,8 @@
 # -*- mode: perl -*-
 requires perl => '5.010';
 
+requires 'rlib'; # XXX:
+
 requires 'MOP4Import::Declare' => 0.003;
 
 on build => sub {
@@ -9,5 +11,6 @@ on build => sub {
 };
 
 on 'test' => sub {
-    requires 'Test::Kantan' => 0.40;
+  # requires 'rlib';
+  requires 'Test::Kantan' => 0.40;
 };
