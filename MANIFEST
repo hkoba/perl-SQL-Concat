@@ -4,6 +4,7 @@ Build.PL
 Changes
 cpanfile
 lib/SQL/Concat.pm
+lib/SQL/Concat.pod
 LICENSE
 MANIFEST			This list of files
 META.json
