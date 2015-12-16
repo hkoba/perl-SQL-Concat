@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-SQL::Concat - Zero knowledge SQL concatenator (with hidden bind variables)
+SQL::Concat - SQL concatenator, only cares about bind-vars, to write SQL generator
 
 =head1 SYNOPSIS
 
@@ -13,10 +13,13 @@ SQL::Concat - Zero knowledge SQL concatenator (with hidden bind variables)
                        FROM   => entries =>
                        WHERE  => ("uid =" =>
                                   PAR(SQL(SELECT => uid => FROM => authors =>
-                                          WHERE => ["name = ?", $name])))
+                                          WHERE => ["name = ?", 'foo'])))
                      );
 
     my ($sql, @bind) = $composed->as_sql_bind;
+    # ==>
+    # SQL: SELECT * FROM entries WHERE uid = (SELECT uid FROM authors WHERE name = ?)
+    # BIND: foo
 
     # OO Interface
     my $comp = SQL::Concat->new(sep => ' ')
@@ -25,17 +28,26 @@ SQL::Concat - Zero knowledge SQL concatenator (with hidden bind variables)
 
 =head1 DESCRIPTION
 
-SQL::Concat is yet another SQL generator for B<minimalists>.
+SQL::Concat is B<NOT> a I<SQL generator>, but a minimalistic I<SQL
+fragments concatenator> with safe bind-variable handling.  SQL::Concat
+doesn't care anything about SQL but B<placeholder> and
+bind-variables. Other important topics to generate correct SQL
+such as SQL syntaxes, SQL keywords, quotes, or even parens are
+all remained your-side.
+
+In other words, generating correct SQL is all up-to-you users of
+SQL::Concat. If you don't (want to) learn about SQL, use other SQL
+generators (e.g. L<SQL::Maker>, L<SQL::Abstract>, ...) instead.
+
 This module only focuses on correctly concatenating SQL fragments
 with keeping their corresponding bind variables.
-Other important topics about SQL B<syntaxes>, B<quotes>, or even B<SQL keywords>
-are all remained untouched to B<your side>. In other words, if you don't (want to)
-learn about SQL, use other SQL generators (e.g. L<SQL::Maker>, L<SQL::Abstract>, ...) instead.
 
 =head2 What concat() does is...
 
 C<join($SEP, @ITEMS)>! except it knows about bind variables and placeholders.
-Default $SEP is C<' '> but you can give it as L</sep> option or L</concat_by>.
+Default $SEP is a space character C<' '> but you can give it as L<sep =E<gt> $sep|/sep> option
+for L<new()|/new>
+or constructor argument like L<SQL::Concat-E<gt>concat_by($SEP)|/concat_by>.
 
 =over 4
 
@@ -55,6 +67,8 @@ If you want to use foreign values, you must use next L</BIND_ARRAY>.
   # SQL: "SELECT foo, bar FROM baz
   #       ORDER BY bar"
   # BIND: ()
+
+Note: C<SQL()> is just a shorthand of C<< SQL::Concat->new(sep => ' ')->concat( @ITEMS... ) >>. See L<SQL()|/SQL> for more equivalent examples.
 
 
 =item BIND_ARRAY [$RAW_SQL, @BIND]
@@ -103,7 +117,7 @@ For example:
   )
   # (WRONG) SQL: SELECT SELECT count(*) FROM foo , SELECT count(*) FROM bar
 
-Fortunately, SQL::Concat has C<< ->paren >> method, so you can write
+Fortunately, SQL::Concat has L<-E<gt>paren()|/paren> method, so you can write
 
   SQL(SELECT =>
       , SQL(SELECT => "count(*)" => FROM => "foo")->paren
@@ -112,7 +126,7 @@ Fortunately, SQL::Concat has C<< ->paren >> method, so you can write
   )
   # SQL: SELECT (SELECT count(*) FROM foo) , (SELECT count(*) FROM bar)
 
-Ore you can use another function L</PAR>.
+Or you can use another function L<PAR()|/PAR>.
 
   use SQL::Concat qw/SQL PAR/;
 
@@ -122,7 +136,7 @@ Ore you can use another function L</PAR>.
       , PAR(SELECT => "count(*)" => FROM => "bar")
   )
 
-You may feel C<","> is ugly. In this case, you can use L</CSV>.
+You may feel C<","> is ugly. In this case, you can use L<CSV()|/CSV>.
 
   use SQL::Concat qw/SQL PAR CSV/;
 
@@ -133,7 +147,7 @@ You may feel C<","> is ugly. In this case, you can use L</CSV>.
   # SQL: SELECT (SELECT count(*) FROM foo), (SELECT count(*) FROM bar)
 
 You may want to use other separator to compose "UNION" query. For this,
-use L</CAT>. This will be useful to compose AND/OR too.
+use L<CAT()|/CAT>. This will be useful to compose AND/OR too.
 
   use SQL::Concat qw/SQL CAT/;
 
@@ -154,8 +168,8 @@ in L<list context|perlglossary/list context> as usual.
   # (or when $name is empty)
   # SQL: SELECT * FROM members
 
-You may feel above cumbersome. If so, you can try another helper L</OPT>
-and L</PFX>.
+You may feel above cumbersome. If so, you can try another helper L<OPT()|/OPT>
+and L<PFX()|/PFX>.
 
   use SQL::Concat qw/SQL PFX OPT/;
 
@@ -268,18 +282,18 @@ use L<MOP4Import::Base::Configure/configure> method.
 =item sep
 X<sep>
 
-Separator, used in L</concat>.
+Separator, used in L<concat()|/concat>.
 
 =item sql
 X<sql>
 
-SQL, constructed when L</concat> is called.
+SQL, constructed when L<concat()|/concat> is called.
 Once set, you are not allowed to call L</concat> again.
 
 =item bind
 X<bind>
 
-Bind variables, constructed when L</BIND_ARRAY> is given to L</concat>.
+Bind variables, constructed when L</BIND_ARRAY> is given to L<concat()|/concat>.
 
 =back
 
@@ -295,10 +309,13 @@ Central operation of SQL::Concat. It basically does:
     if (not ref $item) {
       push @sql, $item;
     } else {
-      my ($s, @b) = ref $item eq 'ARRAY'
-	? @$item : ($item->{sql}, @{$item->{bind}});
-      push @sql, $s;
-      push @{$self->{bind}}, @b;
+      $item = SQL::Concat->of_bind_array($item)
+        if ref $item eq 'ARRAY';
+
+      $item->validate_placeholders;
+
+      push @sql, $item->{sql};
+      push @{$self->{bind}}, @{$item->{bind}};
     }
   }
   $self->{sql} = join($self->{sep}, @sql);

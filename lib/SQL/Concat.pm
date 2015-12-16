@@ -30,7 +30,23 @@ sub OPT {
 sub PFX {
   my ($prefix, @items) = @_;
   return unless @items;
-  SQL($prefix => @items);
+  my @non_empty = _nonempty(@items)
+    or return;
+  SQL($prefix => @non_empty);
+}
+
+sub _nonempty {
+  grep {
+    my MY $item = $_;
+    if (not defined $item
+        or not ref $item and $item !~ /\S/) {
+      ();
+    } elsif ($item->{sql} !~ /\S/) {
+      ();
+    } else {
+      $item;
+    }
+  } @_;
 }
 
 # sub SELECT {
@@ -88,20 +104,47 @@ sub concat {
     if (not ref $item) {
       push @sql, $item;
     } else {
-      my ($s, @b) = ref $item eq 'ARRAY'
-	? @$item : ($item->{sql}, lexpand($item->{bind}));
-      unless (defined $s) {
-	croak "Undefined SQL Fragment!";
-      }
-      unless (($s =~ tr,?,?,) == @b) {
-	croak "SQL Placeholder mismatch! sql='$s' bind=".terse_dump(@b);
-      }
-      push @sql, $s;
-      push @{$self->{bind}}, @b;
+
+      $item = $self->of_bind_array($item)
+        if ref $item eq 'ARRAY';
+
+      $item->validate_placeholders;
+
+      push @sql, $item->{sql};
+      push @{$self->{bind}}, @{$item->{bind}};
     }
   }
   $self->{sql} = join($self->{sep}, @sql);
   $self
+}
+
+sub of_bind_array {
+  (my MY $self, my $bind_array) = @_;
+  my ($s, @b) = @$bind_array;
+  $self->new(sql => $s, bind => \@b);
+}
+
+sub validate_placeholders {
+  (my MY $self) = @_;
+
+  my $nbinds = $self->{bind} ? @{$self->{bind}} : 0;
+
+  unless ($self->count_placeholders == $nbinds) {
+    croak "SQL Placeholder mismatch! sql='$self->{sql}' bind="
+      .terse_dump($self->{bind});
+  }
+
+  $self;
+}
+
+sub count_placeholders {
+  (my MY $self) = @_;
+
+  unless (defined $self->{sql}) {
+    croak "Undefined SQL Fragment!";
+  }
+
+  $self->{sql} =~ tr,?,?,;
 }
 
 sub as_sql_bind {
@@ -136,11 +179,11 @@ sub _sample {
     ->concat(SELECT => foo => FROM => 'bar');
 
   my $composed = SQL(SELECT => "*" =>
-		     FROM   => entries =>
-		     WHERE  => ("uid =" =>
-				PAR(SQL(SELECT => uid => FROM => authors =>
-					WHERE => ["name = ?", $name])))
-		   );
+                     FROM   => entries =>
+                     WHERE  => ("uid =" =>
+                                PAR(SQL(SELECT => uid => FROM => authors =>
+                                        WHERE => ["name = ?", $name])))
+                   );
 
   my ($sql, @bind) = $composed->as_sql_bind;
 }

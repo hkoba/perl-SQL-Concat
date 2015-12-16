@@ -1,21 +1,24 @@
 # NAME
 
-SQL::Concat - Zero knowledge SQL concatenator (with hidden bind variables)
+SQL::Concat - SQL concatenator, only cares about bind-vars, to write SQL generator
 
 # SYNOPSIS
 
 ```perl
     # Functional interface
-    use SQL::Concat qw/SQL/;
+    use SQL::Concat qw/SQL PAR/;
 
     my $composed = SQL(SELECT => "*" =>
                        FROM   => entries =>
                        WHERE  => ("uid =" =>
-                                  SQL(SELECT => uid => FROM => authors =>
-                                      WHERE => ["name = ?", $name])->paren)
+                                  PAR(SQL(SELECT => uid => FROM => authors =>
+                                          WHERE => ["name = ?", 'foo'])))
                      );
 
     my ($sql, @bind) = $composed->as_sql_bind;
+    # ==>
+    # SQL: SELECT * FROM entries WHERE uid = (SELECT uid FROM authors WHERE name = ?)
+    # BIND: foo
 
     # OO Interface
     my $comp = SQL::Concat->new(sep => ' ')
@@ -24,7 +27,8 @@ SQL::Concat - Zero knowledge SQL concatenator (with hidden bind variables)
 
 # DESCRIPTION
 
-SQL::Concat is yet another SQL generator for **minimalists**.
+SQL::Concat is **NOT** a _SQL generator_, but a minimalistic
+_SQL fragments concatenator_ with safe bind-variable handling.
 See [lib/SQL/Concat.pod](lib/SQL/Concat.pod) for details.
 
 # LICENSE
