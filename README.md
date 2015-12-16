@@ -1,6 +1,6 @@
 # NAME
 
-SQL::Concat - SQL concatenator, only cares about bind-vars, to write SQL generator([![Build Status](https://travis-ci.org/hkoba/perl-SQL-Concat.svg)])
+SQL::Concat - SQL concatenator, only cares about bind-vars, to write SQL generator. ![Build Status](https://travis-ci.org/hkoba/perl-SQL-Concat.svg)
 
 
 # SYNOPSIS
