@@ -41,6 +41,8 @@ sub _nonempty {
     if (not defined $item
         or not ref $item and $item !~ /\S/) {
       ();
+    } elsif (ref $item eq 'ARRAY') {
+      $item;
     } elsif ($item->{sql} !~ /\S/) {
       ();
     } else {
