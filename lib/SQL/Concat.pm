@@ -77,7 +77,12 @@ sub clone {
 }
 
 sub paren {
-  shift->format_by('(%s)');
+  (my MY $item) = @_;
+  if (_nonempty($item)) {
+    $item->format_by('(%s)')
+  } else {
+    return;
+  }
 }
 
 sub format_by {
