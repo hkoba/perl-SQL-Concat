@@ -43,7 +43,8 @@ sub _nonempty {
       ();
     } elsif (ref $item eq 'ARRAY') {
       $item;
-    } elsif ($item->{sql} !~ /\S/) {
+    } elsif (ref $item and UNIVERSAL::can($item, 'is_empty')
+	     and $item->is_empty) {
       ();
     } else {
       $item;
@@ -76,6 +77,11 @@ sub clone {
   MY->new(%$item)
 }
 
+sub is_empty {
+  (my MY $item) = @_;
+  $item->{sql} !~ /\S/
+}
+
 sub paren {
   (my MY $item) = @_;
   if (_nonempty($item)) {
@@ -96,7 +102,7 @@ sub concat_by {
   my MY $self = ref $_[0]
     ? shift->configure(sep => shift)
     : shift->new(sep => shift);
-  $self->concat(@_);
+  $self->concat(_nonempty(@_));
 }
 
 sub concat {

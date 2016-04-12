@@ -37,6 +37,10 @@ SELECT * FROM y
 INTERSECT
 SELECT * FROM z");
 
+    describe "CAT empty CAT", sub {
+      expect(CAT(AND => 1, CAT(AND => ()))->sql)
+	->to_be("1");
+    };
   };
   
   describe "CSV", sub {
