@@ -77,7 +77,7 @@
    "version" : "0.001",
    "x_authority" : "cpan:HKOBA",
    "x_contributors" : [
-      "KOBAYASI, Hiroaki <buribullet@gmail.com>"
+      "Kobayasi, Hiroaki <buribullet@gmail.com>"
    ],
    "x_serialization_backend" : "JSON::PP version 2.27300",
    "x_static_install" : 1
