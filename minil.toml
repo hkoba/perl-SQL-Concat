@@ -4,3 +4,10 @@ authority="cpan:HKOBA"
 
 module_maker="ModuleBuildTiny"
 
+abstract_from = "lib/SQL/Concat.pod"
+authors_from  = "lib/SQL/Concat.pod"
+
+license = "perl_5"
+
+[Metadata]
+x_static_install = 1
