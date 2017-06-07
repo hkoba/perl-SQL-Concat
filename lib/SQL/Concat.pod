@@ -6,45 +6,92 @@ SQL::Concat - SQL concatenator, only cares about bind-vars, to write SQL generat
 
 =head1 SYNOPSIS
 
+    #
     # Functional interface
-    use SQL::Concat qw/SQL PAR/;
+    #
+    use SQL::Concat qw/SQL/;
 
-    my $composed = SQL(SELECT => "*" =>
-                       FROM   => entries =>
-                       WHERE  => ("uid =" =>
-                                  PAR(SQL(SELECT => uid => FROM => authors =>
-                                          WHERE => ["name = ?", 'foo'])))
-                     );
+    $q = SQL("SELECT uid FROM authors"); # Just single fixed SQL
 
-    my ($sql, @bind) = $composed->as_sql_bind;
+    $q = SQL("SELECT uid FROM authors"   # Fixed SQL fragment
+    
+            , ["WHERE name = ?", 'foo']  # Pair of placeholder(s) and value(s)
+    
+            , "ORDER BY uid"             # Fixed SQL fragment (again)
+    
+            , ($reverse ? "desc" : ())   # Conditional Fixed SQL fragment
+          );
+
+    $q = SQL($q                          # SQL(SQL(SQL(...), SQL(..))) is ok
+             , "LIMIT 10"
+             , ["OFFSET ?", 30]
+          );
+
+    # Extract concatenated SQL and bind vars.
+    #
+    ($sql, @binds) = $q->as_sql_bind;
     # ==>
-    # SQL: SELECT * FROM entries WHERE uid = (SELECT uid FROM authors WHERE name = ?)
-    # BIND: foo
+    # SQL: SELECT uid FROM authors WHERE name = ? ORDER BY uid LIMIT 10 OFFSET ?
+    # BIND: ('foo', 30)
 
+    #
+    # SQL() doesn't care about composed SQL syntax. It just concat given args.
+    #
+    $q = SQL("SELECT uid", "FROM authors");
+    $q = SQL("SELECT uid FROM", "authors");
+    $q = SQL(SELECT => uid => FROM => 'authors');
+
+    #
     # OO Interface
+    #
     my $comp = SQL::Concat->new(sep => ' ')
       ->concat(SELECT => foo => FROM => 'bar');
 
 
 =head1 DESCRIPTION
 
-SQL::Concat is B<NOT> a I<SQL generator>, but a minimalistic I<SQL
-fragments concatenator> with safe bind-variable handling.  SQL::Concat
-doesn't care anything about SQL but B<placeholder> and
-bind-variables. Other important topics to generate correct SQL
+SQL::Concat is B<NOT> a I<SQL generator>, but a minimalistic B<SQL
+fragments concatenator> with B<safe bind-variable handling>.  SQL::Concat
+doesn't care anything about SQL syntax but I<placeholder> and
+I<bind-variables>. Other important topics to generate correct SQL
 such as SQL syntaxes, SQL keywords, quotes, or even parens are
 all remained your-side.
-
-In other words, generating correct SQL is all up-to-you users of
-SQL::Concat. If you don't (want to) learn about SQL, use other SQL
-generators (e.g. L<SQL::Maker>, L<SQL::Abstract>, ...) instead.
 
 This module only focuses on correctly concatenating SQL fragments
 with keeping their corresponding bind variables.
 
-=head2 What concat() does is...
+=head2 Motivation
 
-C<join($SEP, @ITEMS)>! except it knows about bind variables and placeholders.
+To run complex queries on RDBs, you must compose complex SQLs.
+There are many feature-rich SQL generators on CPAN to help these tasks
+(e.g. L<SQL::Abstract>, L<SQL::Maker>, L<SQL::QueryMaker>, ...).
+Unfortunately, they themselves come with their own syntax and semantics
+and have significant learning cost.
+And anyway, when you want to generate complex SQL at some level,
+you can't avoid learning target SQL anymore.
+Eventually, you may realize you doubled complexity and learning costs.
+
+So, this module is written not for SQL refuser
+but for SQL programmers who really want to write precisely controlled SQL,
+who already know SQL enough and just want to handle I<placeholders>
+and I<bind-variables> safely.
+
+=head2 Concatenate STRING, BIND_ARRAY and SQL::Concat
+
+SQL::Concat can concatenate following four kind of values
+into single SQL::Concat object.
+
+    SQL("SELECT uid FROM authors"   # STRING
+
+      , ["WHERE name = ?", 'foo']   # BIND_ARRAY
+
+      , SQL("ORDER BY uid")         # SQL::Concat object
+
+      , undef                       # undef is ok and silently disappear.
+    );
+
+In other words, SQL::Concat is C<join($SEP, @ITEMS)> with special handling for pairs of B<placeholders> and B<bind variables>.
+
 Default $SEP is a space character C<' '> but you can give it as L<sep =E<gt> $sep|/sep> option
 for L<new()|/new>
 or constructor argument like L<SQL::Concat-E<gt>concat_by($SEP)|/concat_by>.
