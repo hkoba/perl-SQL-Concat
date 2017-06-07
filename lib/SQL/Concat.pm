@@ -91,10 +91,21 @@ sub paren {
   }
 }
 
+sub paren_indent_nl {
+  (my MY $item, my $indent) = @_;
+  if (_nonempty($item)) {
+    $item->format_by("(\n%s\n)", $indent || 2)
+  } else {
+    return;
+  }
+}
+
 sub format_by {
-  (my MY $item, my $fmt) = @_;
+  (my MY $item, my ($fmt, $indent)) = @_;
   my MY $clone = $item->clone;
-  $clone->{sql} = sprintf($fmt, $item->{sql});
+  my $sql = $item->{sql};
+  $sql =~ s/^/" " x $indent/emg if $indent;
+  $clone->{sql} = sprintf($fmt, $sql);
   $clone;
 }
 
@@ -168,6 +179,16 @@ sub as_sql_bind {
     [$self->{sql}, lexpand($self->{bind})];
   }
 }
+
+sub sql_bind_pair {
+  (my MY $self) = @_;
+  if (wantarray) {
+    ($self->{sql}, $self->{bind} // [])
+  } else {
+    [$self->{sql}, $self->{bind} // []];
+  }
+}
+
 
 #========================================
 
