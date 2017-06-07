@@ -1,7 +1,7 @@
 {
    "abstract" : "SQL concatenator, only cares about bind-vars, to write SQL generator",
    "author" : [
-      "KOBAYASI, Hiroaki <hkoba @ cpan.org>"
+      "Kobayasi, Hiroaki <hkoba @ cpan.org>"
    ],
    "dynamic_config" : 0,
    "generated_by" : "Minilla/v3.0.11, CPAN::Meta::Converter version 2.150010",

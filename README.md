@@ -6,45 +6,94 @@ SQL::Concat - SQL concatenator, only cares about bind-vars, to write SQL generat
 # SYNOPSIS
 
 ```perl
+#
 # Functional interface
-use SQL::Concat qw/SQL PAR/;
+#
+use SQL::Concat qw/SQL/;
 
-my $composed = SQL(SELECT => "*" =>
-                   FROM   => entries =>
-                   WHERE  => ("uid =" =>
-                              PAR(SQL(SELECT => uid => FROM => authors =>
-                                      WHERE => ["name = ?", 'foo'])))
-                 );
+$q = SQL("SELECT uid FROM authors"); # Just single fixed SQL
 
-my ($sql, @bind) = $composed->as_sql_bind;
+$q = SQL("SELECT uid FROM authors"   # Fixed SQL fragment
+
+        , ["WHERE name = ?", 'foo']  # Pair of placeholder(s) and value(s)
+
+        , "ORDER BY uid"             # Fixed SQL fragment (again)
+
+        , ($reverse ? "desc" : ())   # Conditional Fixed SQL fragment
+      );
+
+$q = SQL($q                          # SQL(SQL(SQL(...), SQL(..))) is ok
+         , "LIMIT 10"
+         , ["OFFSET ?", 30]
+      );
+
+# Extract concatenated SQL and bind vars.
+#
+($sql, @binds) = $q->as_sql_bind;
 # ==>
-# SQL: SELECT * FROM entries WHERE uid = (SELECT uid FROM authors WHERE name = ?)
-# BIND: foo
+# SQL: SELECT uid FROM authors WHERE name = ? ORDER BY uid LIMIT 10 OFFSET ?
+# BIND: ('foo', 30)
 
+#
+# SQL() doesn't care about composed SQL syntax. It just concat given args.
+#
+$q = SQL("SELECT uid", "FROM authors");
+$q = SQL("SELECT uid FROM", "authors");
+$q = SQL(SELECT => uid => FROM => 'authors');
+
+#
 # OO Interface
+#
 my $comp = SQL::Concat->new(sep => ' ')
   ->concat(SELECT => foo => FROM => 'bar');
 ```
 
 # DESCRIPTION
 
-SQL::Concat is **NOT** a _SQL generator_, but a minimalistic _SQL
-fragments concatenator_ with safe bind-variable handling.  SQL::Concat
-doesn't care anything about SQL but **placeholder** and
-bind-variables. Other important topics to generate correct SQL
+SQL::Concat is **NOT** a _SQL generator_, but a minimalistic **SQL
+fragments concatenator** with **safe bind-variable handling**.  SQL::Concat
+doesn't care anything about SQL syntax but _placeholder_ and
+_bind-variables_. Other important topics to generate correct SQL
 such as SQL syntaxes, SQL keywords, quotes, or even parens are
 all remained your-side.
-
-In other words, generating correct SQL is all up-to-you users of
-SQL::Concat. If you don't (want to) learn about SQL, use other SQL
-generators (e.g. [SQL::Maker](https://metacpan.org/pod/SQL::Maker), [SQL::Abstract](https://metacpan.org/pod/SQL::Abstract), ...) instead.
 
 This module only focuses on correctly concatenating SQL fragments
 with keeping their corresponding bind variables.
 
-## What concat() does is...
+## Motivation
 
-`join($SEP, @ITEMS)`! except it knows about bind variables and placeholders.
+To run complex queries on RDBs, you must compose complex SQLs.
+There are many feature-rich SQL generators on CPAN to help these tasks
+(e.g. [SQL::Abstract](https://metacpan.org/pod/SQL::Abstract), [SQL::Maker](https://metacpan.org/pod/SQL::Maker), [SQL::QueryMaker](https://metacpan.org/pod/SQL::QueryMaker), ...).
+Unfortunately, they themselves come with their own syntax and semantics
+and have significant learning cost.
+And anyway, when you want to generate complex SQL at some level,
+you can't avoid learning target SQL anymore.
+Eventually, you may realize you doubled complexity and learning cost.
+
+So, this module is written not for SQL refusers
+but for dynamic SQL programmers who really want to write precisely controlled SQL,
+who already know SQL enough and just want to handle _placeholders_
+and _bind-variables_ safely.
+
+## Concatenate STRING, BIND\_ARRAY and SQL::Concat
+
+SQL::Concat can concatenate following four kind of values
+into single SQL::Concat object.
+
+```
+SQL("SELECT uid FROM authors"   # STRING
+
+  , ["WHERE name = ?", 'foo']   # BIND_ARRAY
+
+  , SQL("ORDER BY uid")         # SQL::Concat object
+
+  , undef                       # undef is ok and silently disappears.
+);
+```
+
+In other words, SQL::Concat is `join($SEP, @ITEMS)` with special handling for pairs of **placeholders** and **bind variables**.
+
 Default $SEP is a space character `' '` but you can give it as [sep => $sep](#sep) option
 for [new()](#new)
 or constructor argument like [SQL::Concat->concat\_by($SEP)](#concat_by).
@@ -58,25 +107,25 @@ or constructor argument like [SQL::Concat->concat\_by($SEP)](#concat_by).
     ```perl
     use SQL::Concat qw/SQL/;
 
-    SQL(SELECT => 1)->as_sql_bind;
+    SQL("SELECT 1")->as_sql_bind;
     # SQL: "SELECT 1"
     # BIND: ()
 
-    SQL(SELECT => 'foo, bar' => FROM => 'baz', "\nORDER BY bar")->as_sql_bind;
+    SQL("SELECT foo, bar" => FROM => 'baz', "\nORDER BY bar")->as_sql_bind;
     # SQL: "SELECT foo, bar FROM baz
     #       ORDER BY bar"
     # BIND: ()
     ```
 
-    Note: `SQL()` is just a shorthand of `SQL::Concat->new(sep => ' ')->concat( @ITEMS... )`. See [SQL()](#sql) for more equivalent examples.
+    Note: `SQL()` is just a shorthand of `SQL::Concat->new(sep => ' ')->concat( @ITEMS... )`.
 
 - BIND\_ARRAY \[$RAW\_SQL, @BIND\]
 
 
     If item is ARRAY reference, it is treated as BIND\_ARRAY.
     The first element of BIND\_ARRAY is treated as RAW SQL.
-    The rest of the elements are pushed into `->{bind}` array.
-    This SQL fragment must contain same number of SQL-placeholders(`?`)
+    The rest of the elements are pushed into `->bind` array.
+    This SQL fragment must contain **same number of SQL-placeholders**(`?`)
     with corresponding @BIND variables.
 
     ```
@@ -92,12 +141,10 @@ or constructor argument like [SQL::Concat->concat\_by($SEP)](#concat_by).
 - SQL::Concat
 
 
-    Finally, concat() can accept SQL::Concat instances. In this case, `->{sql}` and `->{bind}` are extracted and treated just like ["BIND\_ARRAY"](#bind_array)
+    Finally, concat() can accept SQL::Concat instances. In this case, `->sql` and `->bind` are extracted and treated just like ["BIND\_ARRAY"](#bind_array)
 
     ```perl
-    SQL(SELECT => "*" =>
-        FROM => members =>
-        WHERE =>
+    SQL("SELECT * FROM members WHERE" =>
         SQL(["city = ?", "tokyo"]),
         AND =>
         SQL(["age BETWEEN ? AND ?", 20, 65])
@@ -106,127 +153,109 @@ or constructor argument like [SQL::Concat->concat\_by($SEP)](#concat_by).
     # BIND: ('tokyo', 20, 65)
     ```
 
-## Helper methods/functions for complex SQL construction
+# TUTORIAL
 
-To build complex SQL, we often need to put parens around some SQL fragments.
-For example:
+## Hide WHERE clause if $name is empty
+
+Suppose you have a sql statement
+`select * from artists where name = ? order by age`
+and you want to make `where name = ?` part conditional.
+It can be achieved via [SQL()](#sql).
 
 ```perl
-SQL(SELECT =>
-    , SQL(SELECT => "count(*)" => FROM => "foo")
-    , ","
-    , SQL(SELECT => "count(*)" => FROM => "bar")
-)
-# (WRONG) SQL: SELECT SELECT count(*) FROM foo , SELECT count(*) FROM bar
+use SQL::Concat qw/SQL/;
+
+$q = SQL("select * from artists"
+        , ($name ? ["where name = ?", $name] : ())
+        , "order by age"
+     );
+($sql, @bind) = $q->as_sql_bind;
 ```
 
-Fortunately, SQL::Concat has [->paren()](#paren) method, so you can write
+## Add more conditions with parens
+
+Then, you want to add `age = ?` to where clause.
+So you may want to put "WHERE" only if $name or $age is present.
+You can achieve it via [PFX($STR, @OTHER)](#pfx).
+PFX() prefixes `@OTHER` with `$STR`.
+If `@OTHER` is empty, whole PFX() is also empty.
 
 ```perl
-SQL(SELECT =>
-    , SQL(SELECT => "count(*)" => FROM => "foo")->paren
-    , ","
-    , SQL(SELECT => "count(*)" => FROM => "bar")->paren
-)
-# SQL: SELECT (SELECT count(*) FROM foo) , (SELECT count(*) FROM bar)
+use SQL::Concat qw/PFX/;
+
+$q = SQL("select * from artists"
+        , PFX("WHERE"
+             , ($name ? ["name = ?", $name] : ())
+             , ($age  ? ["age = ?", $age] : ())
+          )
+        , "order by age"
+     );
+# (Wrong)
+# select * from artists WHERE name = ? age = ? order by age
 ```
 
-Or you can use another function [PAR()](#par).
+Unfortunately, this doesn't work if **both** $name and $age is given.
+You must decide conjunction or disjunction.
+Suppose this time you want to put `OR` between them (oh, really?;-).
+You can achieve it via [CAT()](#cat). CAT() behaves like
+[Perl's join($SEP, @ITEM)](https://metacpan.org/pod/perlfunc#join) but keeps bind-variables safely.
 
 ```perl
-use SQL::Concat qw/SQL PAR/;
+use SQL::Concat qw/CAT/;
 
-SQL(SELECT =>
-    , PAR(SELECT => "count(*)" => FROM => "foo")
-    , ","
-    , PAR(SELECT => "count(*)" => FROM => "bar")
-)
+$q = SQL("select * from artists"
+        , PFX("WHERE" =>
+             CAT("OR"
+                , ($name ? ["name = ?", $name] : ())
+                , ($age  ? ["age = ?", $age] : ())
+             )
+          )
+        , "order by age"
+     );
+# select * from artists WHERE name = ? OR age = ? order by age
 ```
 
-You may feel `","` is ugly. In this case, you can use [CSV()](#csv).
+Then, you may feel above is bit complicated and factorize it out.
 
 ```perl
-use SQL::Concat qw/SQL PAR CSV/;
-
-SQL(SELECT =>
-    , CSV(PAR(SELECT => "count(*)" => FROM => "foo")
-         , PAR(SELECT => "count(*)" => FROM => "bar"))
-)
-# SQL: SELECT (SELECT count(*) FROM foo), (SELECT count(*) FROM bar)
+@c = CAT("OR"
+        , ($name ? ["name = ?", $name] : ())
+        , ($age  ? ["age = ?", $age] : ())
+     );
+$q = SQL("select * from artists"
+        , PFX(WHERE => @c)
+        , "order by age"
+     );
 ```
 
-You may want to use other separator to compose "UNION" query. For this,
-use [CAT()](#cat). This will be useful to compose AND/OR too.
+Then, you want to add another condtion `AND address = ?`.
+You will nest CAT().
 
-```perl
-use SQL::Concat qw/SQL CAT/;
-
-CAT(UNION =>
-    , SQL(SELECT => "*" => FROM => "foo")
-    , SQL(SELECT => "*" => FROM => "bar"))
-)
-# SQL: SELECT * FROM foo UNION SELECT * FROM bar
+```
+@c = CAT("AND"
+        , CAT("OR"
+             , ($name ? ["name = ?", $name] : ())
+             , ($age  ? ["age = ?", $age] : ())
+          )
+        , ($address ? ["address = ?", $address] : ())
+     );
+#..
+# (Wrong)
+# select * from artists WHERE name = ? OR age = ? AND address = ? order by age
 ```
 
-To construct SQL conditionally, you can use [Ternary](https://metacpan.org/pod/perlop#ternary) operator
-in [list context](https://metacpan.org/pod/perlglossary#list-context) as usual.
+Unfortunately, this doesn't work as expected because of the lack of paren.
+To put paren around "OR" clause, you can use [->paren()](#paren) method.
 
-```perl
-SQL(SELECT => "*" => FROM => members =>
-    ($name ? SQL(WHERE => ["name = ?", $name]) : ())
-)
-# SQL: SELECT * FROM members WHERE name = ?
-
-# (or when $name is empty)
-# SQL: SELECT * FROM members
 ```
-
-You may feel above cumbersome. If so, you can try another helper [OPT()](#opt)
-and [PFX()](#pfx).
-
-```perl
-use SQL::Concat qw/SQL PFX OPT/;
-
-SQL(SELECT => "*" => FROM => members =>
-    PFX(WHERE => OPT("name = ?", $name))
-)
-```
-
-## Complex example
-
-```perl
-  use SQL::Concat qw/SQL PAR OPT CSV/;
-
-  sub to_find_entries {
-     my ($tags, $limit, $offset, $reverse) = @_;
-
-     my $pager = OPT("limit ?", $limit, OPT("offset ?", $offset));
-   
-     my ($sql, @bind)
-       = SQL(SELECT => CSV("datetime(ts, 'unixepoch', 'localtime') as dt"
-                           , qw/eid path/)
-             , FROM => entrytext =>
-             , ($tags
-                ? SQL(WHERE => eid =>
-                      IN => PAR(SELECT => eid =>
-                                FROM =>
-                                PAR(CAT("\nINTERSECT\n" => map {
-                                  SQL(SELECT => DISTINCT => "eid, ts" =>
-                                      FROM => entry_tag =>
-                                      WHERE => tid =>
-                                      IN => PAR(SELECT => tid =>
-                                                FROM => tag =>
-                                                WHERE => ["tag glob ?", lc($_)]))
-                                } @$tags))
-                                , "\nORDER BY"
-                                , CSV(map {$reverse ? "$_ desc" : $_} qw/ts eid/)
-                                , $pager))
-                : ())
-             , "\nORDER BY"
-             , CSV(map {$reverse ? "$_ desc" : $_} qw/fid feno/)
-             , ($tags ? () :$pager)
-           )->as_sql_bind;
-     }
+@c = CAT("AND"
+        , CAT("OR"
+             , ($name ? ["name = ?", $name] : ())
+             , ($age  ? ["age = ?", $age] : ())
+          )->paren                                   # <<----- THIS
+        , ($address ? ["address = ?", $address] : ())
+     );
+# select * from artists WHERE (name = ? OR age = ?) AND address = ? order by age
 ```
 
 # FUNCTIONS
@@ -240,39 +269,87 @@ Equiv. of
 - `SQL::Concat->concat_by(' ', @ITEMS... )`
 - `SQL::Concat->new(sep => ' ')->concat( @ITEMS... )`
 
-## `CSV( @ITEMS... )`
-
-
-Equiv. of `SQL::Concat->concat_by(', ', @ITEMS... )`
-
-Note: you can use "," anywhere in concat() items. For example,
-you can write `SQL(SELECT => "x, y, z")` instead of `SQL(SELECT => CSV(qw/x y z/))`.
-
 ## `CAT($SEP, @ITEMS... )`
 
 
 Equiv. of `SQL::Concat->concat_by($SEP, @ITEMS... )`, except
 `$SEP` is wrapped by whitespace when necessary.
 
-XXX: Should I use `"\n"` as wrapping char instead of `" "`?
+```perl
+CAT(UNION =>
+    , SQL("select * from foo")
+    , SQL("select * from bar")
+)
+```
+
+If `@ITEMS` are empty, this returns empty result:
+
+```perl
+CAT(AND =>
+    , ($name ? ["name = ?", $name] : ())
+    , ($age  ? ["age = ?", $age]   : ())
+)
+```
+
+## `PFX($ITEM, @OTHER_ITEMS...)`
+
+
+Prefix `$ITEM` only when `@OTHER_ITEMS` are not empty.
+
+```perl
+PFX(WHERE =>
+    ($name ? ["name = ?", $name] : ())
+)
+```
+
+Usually used with `CAT()` like following:
+
+```perl
+PFX(WHERE =>
+    CAT('AND'
+        , ($name ? ["name = ?", $name] : ())
+        , ($age  ? ["age = ?", $age]   : ())
+    )
+)
+```
+
+## `OPT(RAW_SQL, VALUE, @OTHER...)`
+
+
+If VALUE is defined, `(SQL([$RAW_SQL, $VALUE]), @OTHER_ITEMS)` are returned. Otherwise empty list is returned.
+
+This is designed to help generating `"LIMIT ? OFFSET ?"`.
+
+```
+OPT("limit ?", $limit, OPT("offset ?", $offset));
+```
+
+is shorthand version of:
+
+```
+SQL(defined $limit
+   ? (["limit ?", $limit]
+     , SQL(defined $offset
+          ? ["offset ?", $offset]
+          : ()
+       )
+     )
+   : ()
+)
+```
 
 ## `PAR( @ITEMS... )`
 
 
 Equiv. of `SQL( ITEMS...)->paren`
 
-## `PFX($ITEM, @OTHER_ITEMS...)`
+## `CSV( @ITEMS... )`
 
 
-Prefix `$ITEM` only when `@OTHER_ITEMS` are not empty.
-Usually used like `PFX(WHERE => ...conditional...)`.
+Equiv. of `CAT(', ', @ITEMS... )`
 
-## `OPT(RAW_SQL, VALUE, @OTHER_ITEMS...)`
-
-
-If VALUE is defined, `(SQL([$RAW_SQL, $VALUE]), @OTHER_ITEMS)` are returned. Otherwise empty list is returned.
-
-This is designed to help generating `"LIMIT ? OFFSET ?"`.
+Note: you can use "," anywhere in concat() items. For example,
+you can write `SQL(SELECT => "x, y, z")` instead of `SQL(SELECT => CSV(qw/x y z/))`.
 
 # METHODS
 
@@ -327,32 +404,123 @@ foreach my MY $item (@_) {
 $self->{sql} = join($self->{sep}, @sql);
 ```
 
-## `SQL::Concat->concat_by($SEP, @ITEMS)`
+## `SQL::Concat->concat_by($SEP, @I..)`
 
 
 Equiv. of `SQL::Concat->new(sep => $SEP)->concat( @ITEMS... )`
 
-## ` paren() `
+## `->is_empty()`
 
-Equiv. of `$obj->format('(%s)')`.
 
-## ` format_by($FMT) `
+Test whether `$obj->sql` doesn't contain `/\S/` or not.
 
-Apply `sprintf($FMT, $self->{sql})`.
+## `->paren()`
+
+
+Equiv. of `$obj->is_empty ? () : $obj->format_by('(%s)')`.
+
+## `->paren_indent_nl()`
+
+
+Indenting version of [->paren()](#paren) method.
+
+```perl
+$q = SQL("select * from artists where aid in"
+         => SQL(["select aid from records where release_year = ?", $year])
+            ->paren_indent_nl
+     );
+```
+
+Above generates following:
+
+```
+select * from artists where aid in (
+  select aid from records where release_year = ?
+)
+```
+
+## `->format_by($FMT, ?$INDENT?)`
+
+
+Apply `sprintf($FMT, $self->sql)`.
 This will create a clone of $self.
 
-## ` as_sql_bind() `
+If optional integer argument `$INDENT` is given, `sql` is indented
+before formatting.
 
-Extract `$self->{sql}` and `@{$self->{bind}}`.
+## `->as_sql_bind()`
+
+
+Extract `$self->sql` and `@{$self->bind}`.
 If caller is scalar context, wrap them with `[]`.
+
+# Appendix
+
+## Complex example
+
+```perl
+use SQL::Concat qw/SQL CAT OPT/;
+
+my ($tags, $limit, $offset, $reverse) = @_;
+
+my $pager = OPT("limit ?", $limit, OPT("offset ?", $offset));
+
+my ($sql, @bind)
+  = SQL("SELECT datetime(ts, 'unixepoch', 'localtime') as dt, eid, path"
+        , "FROM entrytext"
+        , ($tags
+           ? SQL("WHERE eid IN"
+                 , SQL("SELECT eid FROM"
+                       => CAT("\nINTERSECT\n"
+                              => map {
+                                SQL("SELECT DISTINCT eid, ts FROM entry_tag"
+                                    , "WHERE tid IN"
+                                    => SQL("SELECT tid FROM tag WHERE"
+                                           , ["tag glob ?", lc($_)])
+                                    ->paren_indent_nl
+                                  )
+                              } @$tags
+                            )->paren_indent_nl
+                       , "\nORDER BY"
+                       , "ts desc, eid desc"
+                       , $pager)->paren_indent_nl
+               )
+           : ())
+        , "\nORDER BY"
+        , "fid desc, feno desc"
+        , ($tags ? () : $pager)
+      )->as_sql_bind;
+```
+
+Generated SQL example:
+
+```
+SELECT datetime(ts, 'unixepoch', 'localtime') as dt, eid, path FROM entrytext WHERE eid IN (
+  SELECT eid FROM (
+    SELECT DISTINCT eid, ts FROM entry_tag WHERE tid IN (
+      SELECT tid FROM tag WHERE tag glob ?
+    )
+    INTERSECT
+    SELECT DISTINCT eid, ts FROM entry_tag WHERE tid IN (
+      SELECT tid FROM tag WHERE tag glob ?
+    )
+  )
+  ORDER BY ts desc, eid desc limit ? offset ?
+)
+ORDER BY fid desc, feno desc
+```
+
+# SEE ALSO
+
+[SQL::Object](https://metacpan.org/pod/SQL::Object), [SQL::Maker](https://metacpan.org/pod/SQL::Maker), [SQL::QueryMaker](https://metacpan.org/pod/SQL::QueryMaker)
 
 # LICENSE
 
-Copyright (C) KOBAYASI, Hiroaki.
+Copyright (C) Kobayasi, Hiroaki.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
 # AUTHOR
 
-KOBAYASI, Hiroaki &lt;hkoba @ cpan.org>
+Kobayasi, Hiroaki &lt;hkoba @ cpan.org>
