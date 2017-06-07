@@ -181,26 +181,6 @@ sub BQ {
   q{`}.$_[0].q{`}
 }
 
-
-sub _sample {
-
-  my $name;
-
-  SQL(select => "*" => from => table => );
-
-  my $comp = SQL::Concat->new(sep => ' ')
-    ->concat(SELECT => foo => FROM => 'bar');
-
-  my $composed = SQL(SELECT => "*" =>
-                     FROM   => entries =>
-                     WHERE  => ("uid =" =>
-                                PAR(SQL(SELECT => uid => FROM => authors =>
-                                        WHERE => ["name = ?", $name])))
-                   );
-
-  my ($sql, @bind) = $composed->as_sql_bind;
-}
-
 1;
 
 
