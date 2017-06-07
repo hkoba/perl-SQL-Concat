@@ -7,6 +7,7 @@ module_maker="ModuleBuildTiny"
 abstract_from = "lib/SQL/Concat.pod"
 authors_from  = "lib/SQL/Concat.pod"
 readme_from   = "lib/SQL/Concat.pod"
+markdown_maker = "Pod::Markdown::Github"
 
 license = "perl_5"
 badges = ['travis']
