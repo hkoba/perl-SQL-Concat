@@ -69,10 +69,10 @@ Unfortunately, they themselves come with their own syntax and semantics
 and have significant learning cost.
 And anyway, when you want to generate complex SQL at some level,
 you can't avoid learning target SQL anymore.
-Eventually, you may realize you doubled complexity and learning costs.
+Eventually, you may realize you doubled complexity and learning cost.
 
-So, this module is written not for SQL refuser
-but for SQL programmers who really want to write precisely controlled SQL,
+So, this module is written not for SQL refusers
+but for dynamic SQL programmers who really want to write precisely controlled SQL,
 who already know SQL enough and just want to handle I<placeholders>
 and I<bind-variables> safely.
 
@@ -87,7 +87,7 @@ into single SQL::Concat object.
 
       , SQL("ORDER BY uid")         # SQL::Concat object
 
-      , undef                       # undef is ok and silently disappear.
+      , undef                       # undef is ok and silently disappears.
     );
 
 In other words, SQL::Concat is C<join($SEP, @ITEMS)> with special handling for pairs of B<placeholders> and B<bind variables>.
@@ -115,7 +115,7 @@ If you want to use foreign values, you must use next L</BIND_ARRAY>.
   #       ORDER BY bar"
   # BIND: ()
 
-Note: C<SQL()> is just a shorthand of C<< SQL::Concat->new(sep => ' ')->concat( @ITEMS... ) >>. See L<SQL()|/SQL> for more equivalent examples.
+Note: C<SQL()> is just a shorthand of C<< SQL::Concat->new(sep => ' ')->concat( @ITEMS... ) >>.
 
 
 =item BIND_ARRAY [$RAW_SQL, @BIND]
@@ -124,7 +124,7 @@ X<BIND_ARRAY>
 If item is ARRAY reference, it is treated as BIND_ARRAY.
 The first element of BIND_ARRAY is treated as RAW SQL.
 The rest of the elements are pushed into C<< ->bind >> array.
-This SQL fragment must contain same number of SQL-placeholders(C<?>)
+This SQL fragment must contain B<same number of SQL-placeholders>(C<?>)
 with corresponding @BIND variables.
 
   SQL(["city = ?", 'tokyo'])->as_sql_bind
@@ -150,113 +150,98 @@ Finally, concat() can accept SQL::Concat instances. In this case, C<< ->sql >> a
 
 =back
 
-=head2 Helper methods/functions for complex SQL construction
+=head1 TUTORIAL
 
-To build complex SQL, we often need to put parens around some SQL fragments.
-For example:
+=head2 Hide WHERE clause if $name is empty
 
-  SQL(SELECT =>
-      , SQL("SELECT count(*) FROM foo")
-      , ","
-      , SQL("SELECT count(*) FROM bar")
-  )
-  # (WRONG) SQL: SELECT SELECT count(*) FROM foo , SELECT count(*) FROM bar
+Suppose you have a sql statement
+C<select * from artists where name = ? order by age>
+and you want to make C<where name = ?> part conditional.
+It can be achieved via L<SQL()|/SQL>.
 
-Fortunately, SQL::Concat has L<-E<gt>paren()|/paren> method, so you can write
+  use SQL::Concat qw/SQL/;
 
-  SQL(SELECT =>
-      , SQL("SELECT count(*) FROM foo")->paren
-      , ","
-      , SQL("SELECT count(*) FROM bar")->paren
-  )
-  # SQL: SELECT (SELECT count(*) FROM foo) , (SELECT count(*) FROM bar)
+  $q = SQL("select * from artists"
+          , ($name ? ["where name = ?", $name] : ())
+          , "order by age"
+       );
+  ($sql, @bind) = $q->as_sql_bind;
 
-Or you can use another function L<PAR()|/PAR>.
+=head2 Add more conditions with parens
 
-  use SQL::Concat qw/SQL PAR/;
+Then, you want to add C<age = ?> to where clause.
+So you may want to put "WHERE" only if $name or $age is present.
+You can achieve it via L<PFX($STR, @OTHER)|/PFX>.
+PFX() prefixes C<@OTHER> with C<$STR>.
+If C<@OTHER> is empty, whole PFX() is also empty.
 
-  SQL(SELECT =>
-      , PAR("SELECT count(*) FROM foo")
-      , ","
-      , PAR("SELECT count(*) FROM bar")
-  )
+  use SQL::Concat qw/PFX/;
 
-You may feel C<","> is ugly. In this case, you can use L<CSV()|/CSV>.
+  $q = SQL("select * from artists"
+          , PFX("WHERE"
+               , ($name ? ["name = ?", $name] : ())
+               , ($age  ? ["age = ?", $age] : ())
+            )
+          , "order by age"
+       );
+  # (Wrong)
+  # select * from artists WHERE name = ? age = ? order by age
 
-  use SQL::Concat qw/SQL PAR CSV/;
+Unfortunately, this doesn't work if B<both> $name and $age is given.
+You must decide conjunction or disjunction.
+Suppose this time you want to put C<OR> between them (oh, really?;-).
+You can achieve it via L<CAT()|/CAT>. CAT() behaves like
+L<Perl's join($SEP, @ITEM)|perlfunc/join> but keeps bind-variables safely.
 
-  SQL(SELECT =>
-      , CSV(PAR("SELECT count(*) FROM foo")
-           , PAR("SELECT count(*) FROM bar"))
-  )
-  # SQL: SELECT (SELECT count(*) FROM foo), (SELECT count(*) FROM bar)
+  use SQL::Concat qw/CAT/;
 
-You may want to use other separator to compose "UNION" query. For this,
-use L<CAT()|/CAT>. This will be useful to compose AND/OR too.
+  $q = SQL("select * from artists"
+          , PFX("WHERE" =>
+               CAT("OR"
+                  , ($name ? ["name = ?", $name] : ())
+                  , ($age  ? ["age = ?", $age] : ())
+               )
+            )
+          , "order by age"
+       );
+  # select * from artists WHERE name = ? OR age = ? order by age
 
-  use SQL::Concat qw/SQL CAT/;
+Then, you may feel above is bit complicated and factorize it out.
 
-  CAT(UNION =>
-      , SQL(SELECT => "*" => FROM => "foo")
-      , SQL(SELECT => "*" => FROM => "bar"))
-  )
-  # SQL: SELECT * FROM foo UNION SELECT * FROM bar
+  @c = CAT("OR"
+          , ($name ? ["name = ?", $name] : ())
+          , ($age  ? ["age = ?", $age] : ())
+       );
+  $q = SQL("select * from artists"
+          , PFX(WHERE => @c)
+          , "order by age"
+       );
 
-To construct SQL conditionally, you can use L<Ternary|perlop/ternary> operator
-in L<list context|perlglossary/list context> as usual.
+Then, you want to add another condtion C<AND address = ?>.
+You will nest CAT().
 
-  SQL(SELECT => "*" => FROM => members =>
-      ($name ? SQL(WHERE => ["name = ?", $name]) : ())
-  )
-  # SQL: SELECT * FROM members WHERE name = ?
+  @c = CAT("AND"
+          , CAT("OR"
+               , ($name ? ["name = ?", $name] : ())
+               , ($age  ? ["age = ?", $age] : ())
+            )
+          , ($address ? ["address = ?", $address] : ())
+       );
+  #..
+  # (Wrong)
+  # select * from artists WHERE name = ? OR age = ? AND address = ? order by age
 
-  # (or when $name is empty)
-  # SQL: SELECT * FROM members
+Unfortunately, this doesn't work as expected because of the lack of paren.
+To put paren around "OR" clause, you can use L<-E<gt>paren()|/paren> method.
 
-You may feel above cumbersome. If so, you can try another helper L<OPT()|/OPT>
-and L<PFX()|/PFX>.
-
-  use SQL::Concat qw/SQL PFX OPT/;
-
-  SQL(SELECT => "*" => FROM => members =>
-      PFX(WHERE => OPT("name = ?", $name))
-  )
-
-=head2 Complex example
-
-    use SQL::Concat qw/SQL PAR OPT CSV/;
-  
-    sub to_find_entries {
-       my ($tags, $limit, $offset, $reverse) = @_;
-
-       my $pager = OPT("limit ?", $limit, OPT("offset ?", $offset));
-     
-       my ($sql, @bind)
-         = SQL(SELECT => CSV("datetime(ts, 'unixepoch', 'localtime') as dt"
-                             , qw/eid path/)
-               , FROM => entrytext =>
-               , ($tags
-                  ? SQL(WHERE => eid =>
-                        IN => PAR(SELECT => eid =>
-                                  FROM =>
-                                  PAR(CAT("\nINTERSECT\n" => map {
-                                    SQL(SELECT => DISTINCT => "eid, ts" =>
-                                        FROM => entry_tag =>
-                                        WHERE => tid =>
-                                        IN => PAR(SELECT => tid =>
-                                                  FROM => tag =>
-                                                  WHERE => ["tag glob ?", lc($_)]))
-                                  } @$tags))
-                                  , "\nORDER BY"
-                                  , CSV(map {$reverse ? "$_ desc" : $_} qw/ts eid/)
-                                  , $pager))
-                  : ())
-               , "\nORDER BY"
-               , CSV(map {$reverse ? "$_ desc" : $_} qw/fid feno/)
-               , ($tags ? () :$pager)
-             )->as_sql_bind;
-       }
-
+  @c = CAT("AND"
+          , CAT("OR"
+               , ($name ? ["name = ?", $name] : ())
+               , ($age  ? ["age = ?", $age] : ())
+            )->paren                                   # <<----- THIS
+          , ($address ? ["address = ?", $address] : ())
+       );
+  # select * from artists WHERE (name = ? OR age = ?) AND address = ? order by age
 
 =head1 FUNCTIONS
 
@@ -275,39 +260,76 @@ Equiv. of
 
 =back
 
-=head2 C<< CSV( @ITEMS... ) >>
-X<CSV>
-
-Equiv. of C<< SQL::Concat->concat_by(', ', @ITEMS... ) >>
-
-Note: you can use "," anywhere in concat() items. For example,
-you can write C<< SQL(SELECT => "x, y, z") >> instead of C<< SQL(SELECT => CSV(qw/x y z/)) >>.
-
 =head2 C<< CAT($SEP, @ITEMS... ) >>
 X<CAT>
 
 Equiv. of C<< SQL::Concat->concat_by($SEP, @ITEMS... ) >>, except
 C<$SEP> is wrapped by whitespace when necessary.
 
-XXX: Should I use C<"\n"> as wrapping char instead of C<" ">?
+  CAT(UNION =>
+      , SQL("select * from foo")
+      , SQL("select * from bar")
+  )
+
+If C<@ITEMS> are empty, this returns empty result:
+
+  CAT(AND =>
+      , ($name ? ["name = ?", $name] : ())
+      , ($age  ? ["age = ?", $age]   : ())
+  )
+
+=head2 C<< PFX($ITEM, @OTHER_ITEMS...) >>
+X<PFX>
+
+Prefix C<$ITEM> only when C<@OTHER_ITEMS> are not empty.
+
+  PFX(WHERE =>
+      ($name ? ["name = ?", $name] : ())
+  )
+
+Usually used with C<CAT()> like following:
+
+  PFX(WHERE =>
+      CAT('AND'
+          , ($name ? ["name = ?", $name] : ())
+          , ($age  ? ["age = ?", $age]   : ())
+      )
+  )
+
+
+=head2 C<< OPT(RAW_SQL, VALUE, @OTHER...) >>
+X<OPT>
+
+If VALUE is defined, C<< (SQL([$RAW_SQL, $VALUE]), @OTHER_ITEMS) >> are returned. Otherwise empty list is returned.
+
+This is designed to help generating C<"LIMIT ? OFFSET ?">.
+
+  OPT("limit ?", $limit, OPT("offset ?", $offset));
+
+is shorthand version of:
+
+  SQL(defined $limit
+     ? (["limit ?", $limit]
+       , SQL(defined $offset
+            ? ["offset ?", $offset]
+            : ()
+         )
+       )
+     : ()
+  )
 
 =head2 C<< PAR( @ITEMS... ) >>
 X<PAR>
 
 Equiv. of C<< SQL( ITEMS...)->paren >>
 
-=head2 C<< PFX($ITEM, @OTHER_ITEMS...) >>
-X<PFX>
+=head2 C<< CSV( @ITEMS... ) >>
+X<CSV>
 
-Prefix C<$ITEM> only when C<@OTHER_ITEMS> are not empty.
-Usually used like C<< PFX(WHERE => ...conditional...) >>.
+Equiv. of C<< CAT(', ', @ITEMS... ) >>
 
-=head2 C<< OPT(RAW_SQL, VALUE, @OTHER_ITEMS...) >>
-X<OPT>
-
-If VALUE is defined, C<< (SQL([$RAW_SQL, $VALUE]), @OTHER_ITEMS) >> are returned. Otherwise empty list is returned.
-
-This is designed to help generating C<"LIMIT ? OFFSET ?">.
+Note: you can use "," anywhere in concat() items. For example,
+you can write C<< SQL(SELECT => "x, y, z") >> instead of C<< SQL(SELECT => CSV(qw/x y z/)) >>.
 
 =head1 METHODS
 
@@ -366,35 +388,125 @@ Central operation of SQL::Concat. It basically does:
   $self->{sql} = join($self->{sep}, @sql);
 
 
-=head2 C<< SQL::Concat->concat_by($SEP, @ITEMS) >>
+=head2 C<< SQL::Concat->concat_by($SEP, @I..) >>
 X<concat_by>
 
 Equiv. of C<< SQL::Concat->new(sep => $SEP)->concat( @ITEMS... ) >>
 
-=head2 C< paren() >
+=head2 C<< ->is_empty() >>
+X<is_empty>
 
-Equiv. of C<< $obj->format('(%s)') >>.
+Test whether C<< $obj->sql >> doesn't contain C<< /\S/ >> or not.
 
-=head2 C< format_by($FMT) >
+=head2 C<< ->paren() >>
+X<paren>
+
+Equiv. of C<< $obj->is_empty ? () : $obj->format_by('(%s)') >>.
+
+=head2 C<< ->paren_indent_nl() >>
+X<paren_indent_nl>
+
+Indenting version of L<-E<gt>paren()|/paren> method.
+
+  $q = SQL("select * from artists where aid in"
+           => SQL(["select aid from records where release_year = ?", $year])
+              ->paren_indent_nl
+       );
+
+Above generates following:
+
+=for code sql
+
+  select * from artists where aid in (
+    select aid from records where release_year = ?
+  )
+
+=for code perl
+
+
+=head2 C<< ->format_by($FMT, ?$INDENT?) >>
+X<format_by>
 
 Apply C<< sprintf($FMT, $self->sql) >>.
 This will create a clone of $self.
 
-=head2 C< as_sql_bind() >
+If optional integer argument C<$INDENT> is given, C<sql> is indented
+before formatting.
+
+=head2 C<< ->as_sql_bind() >>
+X<as_sql_bind>
 
 Extract C<< $self->sql >> and C<< @{$self->bind} >>.
 If caller is scalar context, wrap them with C<[]>.
 
+=head1 Appendix
+
+=head2 Complex example
+
+  use SQL::Concat qw/SQL CAT OPT/;
+
+  my ($tags, $limit, $offset, $reverse) = @_;
+
+  my $pager = OPT("limit ?", $limit, OPT("offset ?", $offset));
+
+  my ($sql, @bind)
+    = SQL("SELECT datetime(ts, 'unixepoch', 'localtime') as dt, eid, path"
+	  , "FROM entrytext"
+	  , ($tags
+	     ? SQL("WHERE eid IN"
+                   , SQL("SELECT eid FROM"
+                         => CAT("\nINTERSECT\n"
+                                => map {
+                                  SQL("SELECT DISTINCT eid, ts FROM entry_tag"
+                                      , "WHERE tid IN"
+                                      => SQL("SELECT tid FROM tag WHERE"
+                                             , ["tag glob ?", lc($_)])
+                                      ->paren_indent_nl
+                                    )
+                                } @$tags
+                              )->paren_indent_nl
+                         , "\nORDER BY"
+                         , "ts desc, eid desc"
+                         , $pager)->paren_indent_nl
+                 )
+             : ())
+	  , "\nORDER BY"
+	  , "fid desc, feno desc"
+	  , ($tags ? () : $pager)
+	)->as_sql_bind;
+
+Generated SQL example:
+
+=for code sql
+
+  SELECT datetime(ts, 'unixepoch', 'localtime') as dt, eid, path FROM entrytext WHERE eid IN (
+    SELECT eid FROM (
+      SELECT DISTINCT eid, ts FROM entry_tag WHERE tid IN (
+        SELECT tid FROM tag WHERE tag glob ?
+      )
+      INTERSECT
+      SELECT DISTINCT eid, ts FROM entry_tag WHERE tid IN (
+        SELECT tid FROM tag WHERE tag glob ?
+      )
+    )
+    ORDER BY ts desc, eid desc limit ? offset ?
+  )
+  ORDER BY fid desc, feno desc
+
+
+=head1 SEE ALSO
+
+L<SQL::Object>, L<SQL::Maker>, L<SQL::QueryMaker>
 
 =head1 LICENSE
 
-Copyright (C) KOBAYASI, Hiroaki.
+Copyright (C) Kobayasi, Hiroaki.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
 =head1 AUTHOR
 
-KOBAYASI, Hiroaki E<lt>hkoba @ cpan.orgE<gt>
+Kobayasi, Hiroaki E<lt>hkoba @ cpan.orgE<gt>
 
 =cut
