@@ -106,11 +106,11 @@ If you want to use foreign values, you must use next L</BIND_ARRAY>.
 
   use SQL::Concat qw/SQL/;
 
-  SQL(SELECT => 1)->as_sql_bind;
+  SQL("SELECT 1")->as_sql_bind;
   # SQL: "SELECT 1"
   # BIND: ()
 
-  SQL(SELECT => 'foo, bar' => FROM => 'baz', "\nORDER BY bar")->as_sql_bind;
+  SQL("SELECT foo, bar" => FROM => 'baz', "\nORDER BY bar")->as_sql_bind;
   # SQL: "SELECT foo, bar FROM baz
   #       ORDER BY bar"
   # BIND: ()
@@ -123,7 +123,7 @@ X<BIND_ARRAY>
 
 If item is ARRAY reference, it is treated as BIND_ARRAY.
 The first element of BIND_ARRAY is treated as RAW SQL.
-The rest of the elements are pushed into C<< ->{bind} >> array.
+The rest of the elements are pushed into C<< ->bind >> array.
 This SQL fragment must contain same number of SQL-placeholders(C<?>)
 with corresponding @BIND variables.
 
@@ -138,11 +138,9 @@ with corresponding @BIND variables.
 =item SQL::Concat
 X<compose>
 
-Finally, concat() can accept SQL::Concat instances. In this case, C<< ->{sql} >> and C<< ->{bind} >> are extracted and treated just like L</BIND_ARRAY>
+Finally, concat() can accept SQL::Concat instances. In this case, C<< ->sql >> and C<< ->bind >> are extracted and treated just like L</BIND_ARRAY>
 
-  SQL(SELECT => "*" =>
-      FROM => members =>
-      WHERE =>
+  SQL("SELECT * FROM members WHERE" =>
       SQL(["city = ?", "tokyo"]),
       AND =>
       SQL(["age BETWEEN ? AND ?", 20, 65])
@@ -158,18 +156,18 @@ To build complex SQL, we often need to put parens around some SQL fragments.
 For example:
 
   SQL(SELECT =>
-      , SQL(SELECT => "count(*)" => FROM => "foo")
+      , SQL("SELECT count(*) FROM foo")
       , ","
-      , SQL(SELECT => "count(*)" => FROM => "bar")
+      , SQL("SELECT count(*) FROM bar")
   )
   # (WRONG) SQL: SELECT SELECT count(*) FROM foo , SELECT count(*) FROM bar
 
 Fortunately, SQL::Concat has L<-E<gt>paren()|/paren> method, so you can write
 
   SQL(SELECT =>
-      , SQL(SELECT => "count(*)" => FROM => "foo")->paren
+      , SQL("SELECT count(*) FROM foo")->paren
       , ","
-      , SQL(SELECT => "count(*)" => FROM => "bar")->paren
+      , SQL("SELECT count(*) FROM bar")->paren
   )
   # SQL: SELECT (SELECT count(*) FROM foo) , (SELECT count(*) FROM bar)
 
@@ -178,9 +176,9 @@ Or you can use another function L<PAR()|/PAR>.
   use SQL::Concat qw/SQL PAR/;
 
   SQL(SELECT =>
-      , PAR(SELECT => "count(*)" => FROM => "foo")
+      , PAR("SELECT count(*) FROM foo")
       , ","
-      , PAR(SELECT => "count(*)" => FROM => "bar")
+      , PAR("SELECT count(*) FROM bar")
   )
 
 You may feel C<","> is ugly. In this case, you can use L<CSV()|/CSV>.
@@ -188,8 +186,8 @@ You may feel C<","> is ugly. In this case, you can use L<CSV()|/CSV>.
   use SQL::Concat qw/SQL PAR CSV/;
 
   SQL(SELECT =>
-      , CSV(PAR(SELECT => "count(*)" => FROM => "foo")
-           , PAR(SELECT => "count(*)" => FROM => "bar"))
+      , CSV(PAR("SELECT count(*) FROM foo")
+           , PAR("SELECT count(*) FROM bar"))
   )
   # SQL: SELECT (SELECT count(*) FROM foo), (SELECT count(*) FROM bar)
 
@@ -379,12 +377,12 @@ Equiv. of C<< $obj->format('(%s)') >>.
 
 =head2 C< format_by($FMT) >
 
-Apply C<< sprintf($FMT, $self->{sql}) >>.
+Apply C<< sprintf($FMT, $self->sql) >>.
 This will create a clone of $self.
 
 =head2 C< as_sql_bind() >
 
-Extract C<< $self->{sql} >> and C<< @{$self->{bind}} >>.
+Extract C<< $self->sql >> and C<< @{$self->bind} >>.
 If caller is scalar context, wrap them with C<[]>.
 
 
