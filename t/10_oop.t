@@ -1,3 +1,4 @@
+#!/usr/bin/env perl
 use strict;
 use Test::Kantan;
 use rlib;
@@ -36,6 +37,20 @@ describe "Constructors of SQL::Concat", sub {
 
     it "should raise error for unknown options", sub {
       expect(catch {SQL::Concat->new(foobar => 'baz')})->to_match(qr/foobar/);
+    };
+
+    it "should return a list of sql and bind via as_sql_bind", sub {
+      my $cat;
+      ok {$cat = SQL::Concat->new(\%opts)};
+      expect([$cat->as_sql_bind])->to_be(['select ?', 3]);
+      expect(scalar $cat->as_sql_bind)->to_be(['select ?', 3]);
+    };
+
+    it "should return a pair of sql and bind via sql_bind_pair", sub {
+      my $cat;
+      ok {$cat = SQL::Concat->new(\%opts)};
+      expect([$cat->sql_bind_pair])->to_be(['select ?', [3]]);
+      expect(scalar $cat->sql_bind_pair)->to_be(['select ?', [3]]);
     };
   };
 
