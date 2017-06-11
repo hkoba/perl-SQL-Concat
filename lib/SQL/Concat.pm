@@ -116,6 +116,9 @@ sub concat_by {
   $self->concat(_nonempty(@_));
 }
 
+#
+# XXX: Could have more extension hook, hmm...
+#
 sub concat {
   my MY $self = ref $_[0] ? shift : shift->new;
   if (defined $self->{sql}) {
