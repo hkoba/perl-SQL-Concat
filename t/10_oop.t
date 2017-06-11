@@ -131,7 +131,7 @@ describe "concat(ITEMS...)", sub {
 	      ->as_sql_bind])
 	->to_be(["IN (?, ?, ?)", 3, 4, 5]);
 
-      expect([$SQL->(SELECT => '*' => FROM => member => WHERE =>
+      expect([$SQL->("SELECT * FROM member WHERE" =>
 		     SQL::Concat->concat_by(" AND " =>
 					    SQL::Concat->concat_by(" OR " =>
 								   ["city = ?", 'tokyo']
@@ -143,10 +143,8 @@ describe "concat(ITEMS...)", sub {
 	->to_be([q{SELECT * FROM member WHERE (city = ? OR city = ?) AND age > ?}, 'tokyo', 'osaka', 20]);
 
 
-      expect([$SQL->(select => '*' =>
-		     from => $SQL->(select => rowid =>
-				    from => t1 =>
-				    left => join => t2 => using => "(tid)")->paren
+      expect([$SQL->("select * from"
+                     => $SQL->("select rowid from t1 left join t2 using" => "(tid)")->paren
 		   )
 	      ->as_sql_bind])->to_be(["select * from (select rowid from t1 left join t2 using (tid))"]);
     };
