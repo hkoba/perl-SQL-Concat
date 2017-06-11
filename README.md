@@ -81,7 +81,7 @@ and _bind-variables_ safely.
 SQL::Concat can concatenate following four kind of values
 into single SQL::Concat object.
 
-```perl
+```
 SQL("SELECT uid FROM authors"   # STRING
 
   , ["WHERE name = ?", 'foo']   # BIND_ARRAY
@@ -231,7 +231,7 @@ $q = SQL("select * from artists"
 Then, you want to add another condtion `AND address = ?`.
 You will nest CAT().
 
-```perl
+```
 $c = CAT("AND"
         , CAT("OR"
              , ($name ? ["name = ?", $name] : ())
@@ -247,7 +247,7 @@ $c = CAT("AND"
 Unfortunately, this doesn't work as expected because of the lack of paren.
 To put paren around "OR" clause, you can use [->paren()](#paren) method.
 
-```perl
+```
 $c = CAT("AND"
         , CAT("OR"
              , ($name ? ["name = ?", $name] : ())
@@ -326,7 +326,7 @@ OPT("limit ?", $limit, OPT("offset ?", $offset));
 
 is shorthand version of:
 
-```perl
+```
 SQL(defined $limit
    ? (["limit ?", $limit]
      , SQL(defined $offset
@@ -433,7 +433,7 @@ $q = SQL("select * from artists where aid in"
 
 Above generates following:
 
-```sql
+```
 select * from artists where aid in (
   select aid from records where release_year = ?
 )
@@ -508,7 +508,7 @@ my ($sql, @bind)
 
 Generated SQL example:
 
-```sql
+```
 SELECT datetime(ts, 'unixepoch', 'localtime') as dt, eid, path FROM entrytext WHERE eid IN (
   SELECT eid FROM (
     SELECT DISTINCT eid, ts FROM entry_tag WHERE tid IN (
