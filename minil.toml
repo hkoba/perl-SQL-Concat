@@ -4,9 +4,9 @@ authority="cpan:HKOBA"
 
 module_maker="ModuleBuildTiny"
 
-abstract_from = "lib/SQL/Concat.pod"
-authors_from  = "lib/SQL/Concat.pod"
-readme_from   = "lib/SQL/Concat.pod"
+abstract_from = "lib/SQL/Concat.pm"
+authors_from  = "lib/SQL/Concat.pm"
+readme_from   = "lib/SQL/Concat.pm"
 markdown_maker = "Pod::Markdown::Github"
 
 license = "perl_5"
