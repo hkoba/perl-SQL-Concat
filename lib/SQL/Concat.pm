@@ -91,7 +91,7 @@ sub paren {
   }
 }
 
-sub paren_indent_nl {
+sub paren_nl_indent {
   (my MY $item, my $indent) = @_;
   if (_nonempty($item)) {
     $item->format_by("(\n%s\n)", $indent || 2)

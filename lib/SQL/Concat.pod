@@ -403,14 +403,14 @@ X<paren>
 
 Equiv. of C<< $obj->is_empty ? () : $obj->format_by('(%s)') >>.
 
-=head2 C<< ->paren_indent_nl() >>
-X<paren_indent_nl>
+=head2 C<< ->paren_nl_indent() >>
+X<paren_nl_indent>
 
 Indenting version of L<-E<gt>paren()|/paren> method.
 
   $q = SQL("select * from artists where aid in"
            => SQL(["select aid from records where release_year = ?", $year])
-              ->paren_indent_nl
+              ->paren_nl_indent
        );
 
 Above generates following:
@@ -461,13 +461,13 @@ If caller is scalar context, wrap them with C<[]>.
                                       , "WHERE tid IN"
                                       => SQL("SELECT tid FROM tag WHERE"
                                              , ["tag glob ?", lc($_)])
-                                      ->paren_indent_nl
+                                      ->paren_nl_indent
                                     )
                                 } @$tags
-                              )->paren_indent_nl
+                              )->paren_nl_indent
                          , "\nORDER BY"
                          , "ts desc, eid desc"
-                         , $pager)->paren_indent_nl
+                         , $pager)->paren_nl_indent
                  )
              : ())
 	  , "\nORDER BY"
