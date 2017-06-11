@@ -436,7 +436,7 @@ before formatting.
 =head2 C<< ->as_sql_bind() >>
 X<as_sql_bind>
 
-  ($sql, @bind) = SQL(...)->as_sql_bind;
+  my ($sql, @bind) = SQL(...)->as_sql_bind;
 
 Extract C<< $self->sql >> and C<< @{$self->bind} >>.
 If caller is scalar context, wrap them with C<[]>.
@@ -444,7 +444,7 @@ If caller is scalar context, wrap them with C<[]>.
 =head2 C<< ->sql_bind_pair() >>
 X<sql_bind_pair>
 
-  ($sql, $bind) = SQL(...)->sql_bind_pair;
+  my ($sql, $bind) = SQL(...)->sql_bind_pair;
 
 Extract C<< [$self->sql, $self->bind] >>.
 If caller is scalar context, wrap them with C<[]>.

@@ -218,12 +218,12 @@ $q = SQL("select * from artists"
 Then, you may feel above is bit complicated and factorize it out.
 
 ```perl
-@c = CAT("OR"
+$c = CAT("OR"
         , ($name ? ["name = ?", $name] : ())
         , ($age  ? ["age = ?", $age] : ())
      );
 $q = SQL("select * from artists"
-        , PFX(WHERE => @c)
+        , PFX(WHERE => $c)
         , "order by age"
      );
 ```
@@ -232,7 +232,7 @@ Then, you want to add another condtion `AND address = ?`.
 You will nest CAT().
 
 ```perl
-@c = CAT("AND"
+$c = CAT("AND"
         , CAT("OR"
              , ($name ? ["name = ?", $name] : ())
              , ($age  ? ["age = ?", $age] : ())
@@ -248,7 +248,7 @@ Unfortunately, this doesn't work as expected because of the lack of paren.
 To put paren around "OR" clause, you can use [->paren()](#paren) method.
 
 ```perl
-@c = CAT("AND"
+$c = CAT("AND"
         , CAT("OR"
              , ($name ? ["name = ?", $name] : ())
              , ($age  ? ["age = ?", $age] : ())
@@ -419,7 +419,7 @@ Test whether `$obj->sql` doesn't contain `/\S/` or not.
 
 Equiv. of `$obj->is_empty ? () : $obj->format_by('(%s)')`.
 
-## `->paren_indent_nl()`
+## `->paren_nl_indent()`
 
 
 Indenting version of [->paren()](#paren) method.
@@ -427,7 +427,7 @@ Indenting version of [->paren()](#paren) method.
 ```perl
 $q = SQL("select * from artists where aid in"
          => SQL(["select aid from records where release_year = ?", $year])
-            ->paren_indent_nl
+            ->paren_nl_indent
      );
 ```
 
@@ -451,10 +451,24 @@ before formatting.
 ## `->as_sql_bind()`
 
 
+```perl
+my ($sql, @bind) = SQL(...)->as_sql_bind;
+```
+
 Extract `$self->sql` and `@{$self->bind}`.
 If caller is scalar context, wrap them with `[]`.
 
-# Appendix
+## `->sql_bind_pair()`
+
+
+```perl
+my ($sql, $bind) = SQL(...)->sql_bind_pair;
+```
+
+Extract `[$self->sql, $self->bind]`.
+If caller is scalar context, wrap them with `[]`.
+
+# MISC
 
 ## Complex example
 
@@ -477,13 +491,13 @@ my ($sql, @bind)
                                     , "WHERE tid IN"
                                     => SQL("SELECT tid FROM tag WHERE"
                                            , ["tag glob ?", lc($_)])
-                                    ->paren_indent_nl
+                                    ->paren_nl_indent
                                   )
                               } @$tags
-                            )->paren_indent_nl
+                            )->paren_nl_indent
                        , "\nORDER BY"
                        , "ts desc, eid desc"
-                       , $pager)->paren_indent_nl
+                       , $pager)->paren_nl_indent
                )
            : ())
         , "\nORDER BY"
