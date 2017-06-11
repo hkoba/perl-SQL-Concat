@@ -208,19 +208,19 @@ L<Perl's join($SEP, @ITEM)|perlfunc/join> but keeps bind-variables safely.
 
 Then, you may feel above is bit complicated and factorize it out.
 
-  @c = CAT("OR"
+  $c = CAT("OR"
           , ($name ? ["name = ?", $name] : ())
           , ($age  ? ["age = ?", $age] : ())
        );
   $q = SQL("select * from artists"
-          , PFX(WHERE => @c)
+          , PFX(WHERE => $c)
           , "order by age"
        );
 
 Then, you want to add another condtion C<AND address = ?>.
 You will nest CAT().
 
-  @c = CAT("AND"
+  $c = CAT("AND"
           , CAT("OR"
                , ($name ? ["name = ?", $name] : ())
                , ($age  ? ["age = ?", $age] : ())
@@ -234,7 +234,7 @@ You will nest CAT().
 Unfortunately, this doesn't work as expected because of the lack of paren.
 To put paren around "OR" clause, you can use L<-E<gt>paren()|/paren> method.
 
-  @c = CAT("AND"
+  $c = CAT("AND"
           , CAT("OR"
                , ($name ? ["name = ?", $name] : ())
                , ($age  ? ["age = ?", $age] : ())
@@ -436,10 +436,21 @@ before formatting.
 =head2 C<< ->as_sql_bind() >>
 X<as_sql_bind>
 
+  ($sql, @bind) = SQL(...)->as_sql_bind;
+
 Extract C<< $self->sql >> and C<< @{$self->bind} >>.
 If caller is scalar context, wrap them with C<[]>.
 
-=head1 Appendix
+=head2 C<< ->sql_bind_pair() >>
+X<sql_bind_pair>
+
+  ($sql, $bind) = SQL(...)->sql_bind_pair;
+
+Extract C<< [$self->sql, $self->bind] >>.
+If caller is scalar context, wrap them with C<[]>.
+
+
+=head1 MISC
 
 =head2 Complex example
 
