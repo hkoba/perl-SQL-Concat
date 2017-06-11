@@ -149,10 +149,34 @@ describe "concat(ITEMS...)", sub {
 	      ->as_sql_bind])->to_be(["select * from (select rowid from t1 left join t2 using (tid))"]);
     };
   };
-
 };
 
+describe "Subclass of SQL::Concat", sub {
+  {
+    package
+      SCat1;
 
+    use SQL::Concat -as_base
+      , [fields => qw/foo/];
+
+    # Extend placeholder syntax.
+    sub count_placeholders {
+      (my MY $self) = @_;
+      unless (defined $self->{sql}) {
+        Carp::croak("Undefined SQL Fragment!");
+      }
+
+      my @match = $self->{sql} =~ /(\? | :\w+)/gx;
+    }
+  }
+
+  describe "->concat()", sub {
+    it "should allow extending placeholder syntax", sub {
+      expect([SCat1->concat(["? = :y", 'x', 'y'])->as_sql_bind])->to_be(["? = :y", 'x', 'y']);
+    };
+  };
+  
+};
 
 done_testing;
 
