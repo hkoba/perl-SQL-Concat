@@ -12,6 +12,22 @@ use MOP4Import::Base::Configure -as_base
   ;
 use MOP4Import::Util qw/lexpand terse_dump/;
 
+use overload
+  '.' => 'operator_concat',
+  'bool' => 'operator_bool';
+
+sub operator_bool {
+  (my MY $self) = @_;
+  defined $self->{sql} and $self->{sql} ne '';
+}
+
+sub operator_concat {
+  (my MY $self, my ($other, $swap)) = @_;
+  ref($self)->new(sep => $self->{sep})->concat(
+    $swap ? ($other, $self) : ($self, $other)
+  );
+}
+
 sub SQL {
   MY->new(sep => ' ')->concat(@_);
 }
