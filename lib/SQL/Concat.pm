@@ -28,6 +28,11 @@ sub operator_concat {
   );
 }
 
+sub TO_JSON {
+  (my MY $self) = @_;
+  [$self->as_sql_bind];
+}
+
 sub SQL {
   MY->new(sep => ' ')->concat(@_);
 }

@@ -22,4 +22,5 @@ on 'test' => sub {
   # requires 'rlib';
   requires 'Test::Kantan' => 0.40;
   requires 'Test::Spec';
+  requires 'Cpanel::JSON::XS';
 };
