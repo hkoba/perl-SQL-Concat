@@ -1,0 +1,44 @@
+on:
+  push:
+    branches: [ '*' ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Perl ${{ matrix.perl-version }}
+      uses: shogo82148/actions-setup-perl@v1
+      with:
+        perl-version: ${{ matrix.perl-version }}
+        multi-thread: ${{ matrix.threaded }}
+
+    - name: Install Dependencies
+      run: cpm install -g --show-build-log-on-failure --with-recommends --with-test
+    - name: Build
+      run: perl Build.PL && ./Build build
+    - name: Run tests
+      run: ./Build test
+
+    strategy:
+      fail-fast: false
+      matrix:
+        threaded: [ true, false ]
+        perl-version:
+          - '5.16'
+          - '5.26'
+          - '5.28'
+          - '5.30'
+          - '5.32'
+          - '5.34'
+          - '5.36'
+          - '5.38'
+          - '5.40'
+          - '5.42'
+          - '5'
+        target:
+          - { name: Linux, os: ubuntu-latest, triple: x86_64-unknown-linux-gnu }
