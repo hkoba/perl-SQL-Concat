@@ -44,15 +44,14 @@ sub PAR {
 # Useful for OPT("limit ?", $limit, OPT("offset ?", $offset))
 sub OPT {
   my ($expr, $value, @rest) = @_;
-  return unless defined $value;
+  return wantarray ? () : SQL() unless defined $value;
   SQL([$expr, $value], @rest);
 }
 
 sub PFX {
   my ($prefix, @items) = @_;
-  return unless @items;
-  my @non_empty = _nonempty(@items)
-    or return;
+  my @non_empty = @items ? _nonempty(@items) : ()
+    or return wantarray ? () : SQL();
   SQL($prefix => @non_empty);
 }
 
