@@ -6,7 +6,46 @@ use rlib;
 
 use SQL::Concat qw(SQL WHERE OPT);
 
-describe "concat - ", sub {
+describe "eq: ", sub {
+  it "SQL() eq SQL()", sub {
+    ok(SQL() eq SQL());
+  };
+  it "SQL() eq ''", sub {
+    ok(SQL() eq '');
+  };
+  it "'' eq SQL()", sub {
+    ok('' eq SQL());
+  };
+  it "SQL() ne undef", sub {
+    ok(SQL() ne undef);
+  };
+  it "SQL(' ') eq ' '", sub {
+    ok(SQL(' ') eq ' ');
+  };
+  it "SQL(' ') ne ''", sub {
+    ok(SQL(' ') ne '');
+  };
+
+  it "SQL(['']) eq SQL([''])", sub {
+    ok(SQL(['']) eq SQL(['']));
+  };
+
+  it "SQL(['select ?', 1]) eq ['select ?', 1]", sub {
+    ok(SQL(['select ?', 1]) eq ['select ?', 1]);
+  };
+
+  it "SQL(['select ?', 1]) ne ['select ?', 1, 2]", sub {
+    ok(SQL(['select ?', 1]) ne ['select ?', 1, 2]);
+  };
+
+  it "SQL(['select ? is null', undef]) eq ['select ? is null', undef]", sub {
+    local $SIG{__WARN__} = sub {die @_};
+    ok(SQL(['select ? is null', undef]) eq ['select ? is null', undef]);
+  };
+
+};
+
+describe "concat: ", sub {
 
   describe "SQL('select') . 1", sub {
     my $cat = SQL("select") . 1;
@@ -47,7 +86,7 @@ describe "concat - ", sub {
   };
 };
 
-describe "bool - ", sub {
+describe "bool: ", sub {
 
   describe "SQL()", sub {
 

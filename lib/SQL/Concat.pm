@@ -14,7 +14,10 @@ use MOP4Import::Util qw/lexpand terse_dump/;
 
 use overload
   '.' => 'operator_concat',
-  'bool' => 'operator_bool';
+  'bool' => 'operator_bool',
+  'eq' => 'operator_eq',
+  'ne' => 'operator_ne',
+  ;
 
 sub operator_bool {
   (my MY $self) = @_;
@@ -30,6 +33,49 @@ sub operator_concat {
   );
 }
 
+sub operator_ne {
+  (my MY $self, my ($other, $swap)) = @_;
+  not $self->operator_eq($other, $swap);
+}
+
+sub operator_eq {
+  (my MY $self, my ($other, $swap)) = @_;
+
+  my $myBind = $self->{bind} // [];
+
+  if (not defined $other) {
+    return;
+  }
+  elsif (not ref $other) {
+    @$myBind == 0 && ($self->{sql} // '') eq $other
+  }
+  else {
+    my ($otherSQL, @other) = ref $other eq 'ARRAY'
+      ? @$other : $other->as_sql_bind;
+
+    ($self->{sql} // '') eq ($otherSQL // '')
+      &&
+      _array_equal($myBind, \@other)
+  }
+}
+
+sub _array_equal {
+  my ($la, $ra) = @_;
+  return unless @$la == @$ra;
+  for (my $i = 0; $i < @$ra; $i++) {
+    if (!defined $la->[$i] and !defined $ra->[$i]) {
+      # same
+    }
+    elsif (!defined $la->[$i] xor !defined $ra->[$i]) {
+      return;
+    }
+    elsif ($la->[$i] ne $ra->[$i]) {
+      return;
+    }
+  }
+  return 1;
+}
+
 sub TO_JSON {
   (my MY $self) = @_;
   [$self->as_sql_bind];
@@ -39,12 +85,21 @@ sub SQL {
   MY->new(sep => ' ')->concat(@_);
 }
 
-sub PAR {
+*PAR = *PAREN; *PAR = *PAREN;
+sub PAREN {
   SQL(@_)->paren;
 }
 
 sub WHERE {
   PFX(WHERE => @_);
+}
+
+sub AND {
+  CAT(AND => @_)->paren;
+}
+
+sub OR {
+  CAT(OR => @_)->paren;
 }
 
 # Useful for OPT("limit ?", $limit, OPT("offset ?", $offset))
