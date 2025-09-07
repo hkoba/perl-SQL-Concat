@@ -24,7 +24,9 @@ sub operator_bool {
 sub operator_concat {
   (my MY $self, my ($other, $swap)) = @_;
   ref($self)->new(sep => $self->{sep})->concat(
-    $swap ? ($other, $self) : ($self, $other)
+    _nonempty(
+      $swap ? ($other, $self) : ($self, $other)
+    )
   );
 }
 
@@ -39,6 +41,10 @@ sub SQL {
 
 sub PAR {
   SQL(@_)->paren;
+}
+
+sub WHERE {
+  PFX(WHERE => @_);
 }
 
 # Useful for OPT("limit ?", $limit, OPT("offset ?", $offset))

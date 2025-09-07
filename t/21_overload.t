@@ -4,7 +4,7 @@ use Test::Spec;
 
 use rlib;
 
-use SQL::Concat qw(SQL);
+use SQL::Concat qw(SQL WHERE OPT);
 
 describe "concat - ", sub {
 
@@ -23,6 +23,27 @@ describe "concat - ", sub {
       is($cat->sql
          , "select 1");
     };
+  };
+
+  describe "'select * from user' . WHERE()", sub {
+    my $test = sub {
+      my ($minAge) = @_;
+      my $q = 'select * from user';
+      $q . WHERE(
+        OPT("age >= ?", $minAge || undef)
+      );
+    };
+
+    it "should return 'select * from user' when minAge is undef", sub {
+      is($test->()
+         , 'select * from user');
+    };
+
+    it "should return 'select * from user WHERE age >= ?' when minAge is 18", sub {
+      is($test->(18)
+         , ['select * from user WHERE age >= ?', 18]);
+    };
+
   };
 };
 
