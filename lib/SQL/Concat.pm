@@ -302,46 +302,29 @@ SQL::Concat - SQL concatenator, only cares about bind-vars, to write SQL generat
 
 =head1 SYNOPSIS
 
-    #
-    # Functional interface
-    #
-    use SQL::Concat qw/SQL/;
+    use SQL::Concat qw/Q WHERE/;
 
-    $q = SQL("SELECT uid FROM authors"); # Just single fixed SQL
+    # Q($SQL, @bind) creates a SQL::Concat instance (with . operator overload)
+    $q = Q("select * from books where name = ? limit 3", 'foo');
+    $q = Q("select * from books")  . Q("where name = ?", 'foo'). "limit 3";
+    $q =   "select * from books"   . Q("where name = ?", 'foo'). "limit 3";
+    $q = Q(). "select * from books" . ["where name = ?", 'foo']. "limit 3";
 
-    $q = SQL("SELECT uid FROM authors"   # Fixed SQL fragment
-    
-            , ["WHERE name = ?", 'foo']  # Pair of placeholder(s) and value(s)
-    
-            , "ORDER BY uid"             # Fixed SQL fragment (again)
-    
-            , ($reverse ? "desc" : ())   # Conditional Fixed SQL fragment
-          );
+    [$q->as_sql_bind];
+    # ==> ['select * from books where name = ? limit 3', 'foo']
 
-    $q = SQL($q                          # SQL(SQL(SQL(...), SQL(..))) is ok
-             , "LIMIT 10"
-             , ["OFFSET ?", 30]
-          );
+    $q = "select * from books" . WHERE() . "order by price";
+    # ==> ["select * from books order by price"]
 
-    # Extract concatenated SQL and bind vars.
-    #
-    ($sql, @binds) = $q->as_sql_bind;
-    # ==>
-    # SQL: SELECT uid FROM authors WHERE name = ? ORDER BY uid LIMIT 10 OFFSET ?
-    # BIND: ('foo', 30)
+    $q = "select * from books".WHERE(["name = ?", 'foo'])."order by price";
+    # ==> ["select * from books WHERE name = ? order by price", 'foo']
 
-    #
-    # SQL() doesn't care about composed SQL syntax. It just concat given args.
-    #
-    $q = SQL("SELECT uid", "FROM authors");
-    $q = SQL("SELECT uid FROM", "authors");
-    $q = SQL(SELECT => uid => FROM => 'authors');
-
-    #
     # OO Interface
-    #
-    my $comp = SQL::Concat->new(sep => ' ')
-      ->concat(SELECT => foo => FROM => 'bar');
+    my $comp = SQL::Concat->new(sep => ' ')->concat(
+      "select * from books",
+      ["where name = ?", 'foo'],
+      "order by price",
+    );
 
 
 =head1 DESCRIPTION
