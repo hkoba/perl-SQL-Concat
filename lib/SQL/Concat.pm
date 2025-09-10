@@ -302,17 +302,22 @@ SQL::Concat - SQL concatenator, only cares about bind-vars, to write SQL generat
 
 =head1 SYNOPSIS
 
-    use SQL::Concat qw/Q WHERE/;
+    use SQL::Concat qw/SQL Q WHERE/;
 
-    # Q($SQL, @bind) creates a SQL::Concat instance (with . operator overload)
+    # core function: SQL(...SQL_FRAGMENTS...)
+    $q = SQL("select * from books", ["where name = ?", 'foo'], "limit 3");
+
+    [$q->as_sql_bind];
+    # ==> ['select * from books where name = ? limit 3', 'foo']
+
+    # Easy wrapper: Q($SQL, @bind)
+    # creates a SQL::Concat instance (with . operator overload)
     $q = Q("select * from books where name = ? limit 3", 'foo');
     $q = Q("select * from books")  . Q("where name = ?", 'foo'). "limit 3";
     $q =   "select * from books"   . Q("where name = ?", 'foo'). "limit 3";
     $q = Q(). "select * from books" . ["where name = ?", 'foo']. "limit 3";
 
-    [$q->as_sql_bind];
-    # ==> ['select * from books where name = ? limit 3', 'foo']
-
+    # Erasable 'WHERE': WHERE(...SQL_FRAGMENTS...)
     $q = "select * from books" . WHERE() . "order by price";
     # ==> ["select * from books order by price"]
 
@@ -524,6 +529,41 @@ To put paren around "OR" clause, you can use L<-E<gt>paren()|/paren> method.
 
 =head1 FUNCTIONS
 
+=head2 C<< Q($SQL, @BIND_VALUES) >>
+
+C<Q($SQL, @BIND)> creates SQL::Concat instance with given bind values.
+Since SQL::Concat overloads '.' operator, you can create complex SQL with placeholders just using string concatenation.
+
+
+    $q = Q("select * from foo where x = ? and y = ? limit 10", 3, 8);
+    $q = "select * from foo".Q("where x = ? and y = ?", 3, 8)."limit 10";
+    $q = Q()."select * from foo".["where x = ? and y = ?", 3, 8]."limit 10";
+
+Internally, C<Q($SQL, @BIND)> is defined using C<SQL()>:
+
+    SQL(@_ ? [@_] : ())
+
+
+=head2 C<< WHERE(@ITEMS...) >>
+
+C<WHERE(...)> creates SQL::Concat instance. If given C<@ITEMS> are not empty,
+it returns a keyword C<WHERE> and given items. Otherwise, it returns C<Q()>.
+
+    $q = WHERE($name ? ["name = ?", $name] : ());
+
+Internally, C<WHERE(...)> is defined using C<PFX()>:
+
+    PFX(WHERE => @_);
+
+
+=head2 C<< AND(@ITEMS...) >>
+
+    CAT(AND => @_)->paren;
+
+=head2 C<< OR(@ITEMS...) >>
+
+    CAT(OR => @_)->paren;
+
 =head2 C<< SQL( @ITEMS... ) >>
 X<SQL>
 
@@ -597,10 +637,12 @@ is shorthand version of:
      : ()
   )
 
-=head2 C<< PAR( @ITEMS... ) >>
-X<PAR>
+=head2 C<< PAREN( @ITEMS... ) >>
+X<PAREN>
 
 Equiv. of C<< SQL( ITEMS...)->paren >>
+
+C<PAR()> is an alias of C<PAREN()>
 
 =head2 C<< CSV( @ITEMS... ) >>
 X<CSV>
