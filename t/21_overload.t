@@ -47,6 +47,19 @@ describe "eq: ", sub {
 
 describe "concat: ", sub {
 
+  describe "Q()", sub {
+    it "should return empty string(identity)", sub {
+      my $q = Q();
+      is($q, "");
+    };
+  };
+  describe "Q().Q().Q()", sub {
+    it "should return empty string(identity)", sub {
+      my $q = Q().Q().Q();
+      is($q, "");
+    };
+  };
+
   describe "Q('select') . 1", sub {
     my $cat = Q("select") . 1;
 
