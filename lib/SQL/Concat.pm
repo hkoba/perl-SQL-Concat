@@ -85,6 +85,10 @@ sub SQL {
   MY->new(sep => ' ')->concat(@_);
 }
 
+sub Q {
+  SQL(@_ ? [@_] : ())
+}
+
 *PAR = *PAREN; *PAR = *PAREN;
 sub PAREN {
   SQL(@_)->paren;
