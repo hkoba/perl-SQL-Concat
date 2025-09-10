@@ -4,83 +4,82 @@ use Test::Spec;
 
 use rlib;
 
-use SQL::Concat qw(SQL WHERE OPT);
+use SQL::Concat qw(Q WHERE OPT);
 
 describe "eq: ", sub {
-  it "SQL() eq SQL()", sub {
-    ok(SQL() eq SQL());
+  it "Q() eq Q()", sub {
+    ok(Q() eq Q());
   };
-  it "SQL() eq ''", sub {
-    ok(SQL() eq '');
+  it "Q() eq ''", sub {
+    ok(Q() eq '');
   };
-  it "'' eq SQL()", sub {
-    ok('' eq SQL());
+  it "'' eq Q()", sub {
+    ok('' eq Q());
   };
-  it "SQL() ne undef", sub {
-    ok(SQL() ne undef);
+  it "Q() ne undef", sub {
+    ok(Q() ne undef);
   };
-  it "SQL(' ') eq ' '", sub {
-    ok(SQL(' ') eq ' ');
+  it "Q(' ') eq ' '", sub {
+    ok(Q(' ') eq ' ');
   };
   it "SQL(' ') ne ''", sub {
-    ok(SQL(' ') ne '');
+    ok(Q(' ') ne '');
   };
 
-  it "SQL(['']) eq SQL([''])", sub {
-    ok(SQL(['']) eq SQL(['']));
+  it "Q('') eq Q('')", sub {
+    ok(Q('') eq Q(''));
   };
 
-  it "SQL(['select ?', 1]) eq ['select ?', 1]", sub {
-    ok(SQL(['select ?', 1]) eq ['select ?', 1]);
+  it "Q('select ?', 1) eq ['select ?', 1]", sub {
+    ok(Q('select ?', 1) eq ['select ?', 1]);
   };
 
-  it "SQL(['select ?', 1]) ne ['select ?', 1, 2]", sub {
-    ok(SQL(['select ?', 1]) ne ['select ?', 1, 2]);
+  it "Q('select ?', 1) ne ['select ?', 1, 2]", sub {
+    ok(Q('select ?', 1) ne ['select ?', 1, 2]);
   };
 
-  it "SQL(['select ? is null', undef]) eq ['select ? is null', undef]", sub {
+  it "Q('select ? is null', undef) eq ['select ? is null', undef]", sub {
     local $SIG{__WARN__} = sub {die @_};
-    ok(SQL(['select ? is null', undef]) eq ['select ? is null', undef]);
+    ok(Q('select ? is null', undef) eq ['select ? is null', undef]);
   };
 
 };
 
 describe "concat: ", sub {
 
-  describe "SQL('select') . 1", sub {
-    my $cat = SQL("select") . 1;
+  describe "Q('select') . 1", sub {
+    my $cat = Q("select") . 1;
 
     it "should return 'select 1'", sub {
-      is($cat->sql
-         , "select 1");
+      is_deeply([$cat->as_sql_bind]
+                , ["select 1"]);
     };
   };
 
-  describe "'select' . SQL(1)", sub {
-    my $cat = "select" . SQL(1);
+  describe "'select' . Q(1)", sub {
+    my $cat = "select" . Q(1);
     it "should return 'select 1'", sub {
-      is($cat->sql
-         , "select 1");
+      is_deeply([$cat->as_sql_bind]
+                , ["select 1"]);
     };
   };
 
-  describe "'select * from user' . WHERE()", sub {
+  describe "'select * from user' . WHERE(...) . 'limit 10'", sub {
     my $test = sub {
       my ($minAge) = @_;
-      my $q = 'select * from user';
-      $q . WHERE(
+      'select * from user' . WHERE(
         OPT("age >= ?", $minAge || undef)
-      );
+      ) . "limit 10";
     };
 
-    it "should return 'select * from user' when minAge is undef", sub {
-      is($test->()
-         , 'select * from user');
+    it "should return 'select * from user limit 10' when minAge is undef", sub {
+      is_deeply([$test->()->as_sql_bind]
+                , ['select * from user limit 10']);
     };
 
-    it "should return 'select * from user WHERE age >= ?' when minAge is 18", sub {
-      is($test->(18)
-         , ['select * from user WHERE age >= ?', 18]);
+    it "should return 'select * from user WHERE age >= ? limit 10' when minAge is 18", sub {
+      is_deeply([$test->(18)->as_sql_bind]
+                , ['select * from user WHERE age >= ? limit 10', 18]);
     };
 
   };
@@ -88,19 +87,9 @@ describe "concat: ", sub {
 
 describe "bool: ", sub {
 
-  describe "SQL()", sub {
+  describe "Q()", sub {
 
-    my $cat = SQL();
-
-    it "should be falsy", sub {
-
-      is(!!$cat, !!0);
-    };
-  };
-
-  describe "SQL('')", sub {
-
-    my $cat = SQL('');
+    my $cat = Q();
 
     it "should be falsy", sub {
 
@@ -108,9 +97,19 @@ describe "bool: ", sub {
     };
   };
 
-  describe "SQL(1)", sub {
+  describe "Q('')", sub {
 
-    my $cat = SQL(1);
+    my $cat = Q('');
+
+    it "should be falsy", sub {
+
+      is(!!$cat, !!0);
+    };
+  };
+
+  describe "Q(1)", sub {
+
+    my $cat = Q(1);
 
     it "should be truthy", sub {
 
@@ -118,9 +117,9 @@ describe "bool: ", sub {
     };
   };
 
-  describe "SQL(0)", sub {
+  describe "Q(0)", sub {
 
-    my $cat = SQL(0);
+    my $cat = Q(0);
 
     it "should be truthy!(since it is a nonempty string)", sub {
 
