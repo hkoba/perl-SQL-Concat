@@ -3,7 +3,7 @@ requires perl => '5.010';
 
 requires 'rlib'; # XXX:
 
-requires 'MOP4Import::Declare' => 0.003;
+requires 'MOP4Import::Declare' => 0.070;
 
 requires 'rlib'; # XXX:
 

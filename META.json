@@ -4,13 +4,13 @@
       "Kobayasi, Hiroaki <hkoba @ cpan.org>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Minilla/v3.0.11, CPAN::Meta::Converter version 2.150010",
+   "generated_by" : "Minilla/v3.1.25, CPAN::Meta::Converter version 2.150010",
    "license" : [
       "perl_5"
    ],
    "meta-spec" : {
       "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
-      "version" : "2"
+      "version" : 2
    },
    "name" : "SQL-Concat",
    "no_index" : {
@@ -44,21 +44,23 @@
          "requires" : {
             "Test::CPAN::Meta" : "0",
             "Test::MinimumVersion::Fast" : "0.04",
-            "Test::PAUSE::Permissions" : "0.04",
+            "Test::PAUSE::Permissions" : "0.07",
             "Test::Pod" : "1.41",
             "Test::Spellunker" : "v0.2.7"
          }
       },
       "runtime" : {
          "requires" : {
-            "MOP4Import::Declare" : "0.003",
+            "MOP4Import::Declare" : "0.07",
             "perl" : "5.010",
             "rlib" : "0"
          }
       },
       "test" : {
          "requires" : {
-            "Test::Kantan" : "0.4"
+            "Cpanel::JSON::XS" : "0",
+            "Test::Kantan" : "0.4",
+            "Test::Spec" : "0"
          }
       }
    },
@@ -70,16 +72,16 @@
       "homepage" : "https://github.com/hkoba/perl-SQL-Concat",
       "repository" : {
          "type" : "git",
-         "url" : "git://github.com/hkoba/perl-SQL-Concat.git",
+         "url" : "https://github.com/hkoba/perl-SQL-Concat.git",
          "web" : "https://github.com/hkoba/perl-SQL-Concat"
       }
    },
-   "version" : "0.002",
+   "version" : "0.010",
    "x_authority" : "cpan:HKOBA",
    "x_contributors" : [
       "KOBAYASI, Hiroaki <hkoba@ssri.com>",
       "Kobayasi, Hiroaki <buribullet@gmail.com>"
    ],
-   "x_serialization_backend" : "JSON::PP version 2.27400_02",
+   "x_serialization_backend" : "JSON::PP version 4.16",
    "x_static_install" : 1
 }
